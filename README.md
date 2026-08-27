@@ -1,11 +1,10 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <application android:theme="@style/AppTheme" android:label="台股 V2 掃描器" android:allowBackup="false">
-        <activity android:name=".MainActivity" android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN"/>
-                <category android:name="android.intent.category.LAUNCHER"/>
-            </intent-filter>
-        </activity>
-    </application>
-</manifest>
+# Taiwan V2 Scanner V0.3
+
+一次安裝，多個測試按鈕：
+1. 100 檔/批
+2. 200 檔/批
+3. 500 檔/批
+4. 全上市自動最佳化：依序測試 100、200、500 並比較
+
+目前只驗證 TWSE 上市即時行情取得能力，不包含 V2 選股評分。
+Android 權限只有 INTERNET；無廣告、無追蹤 SDK。
