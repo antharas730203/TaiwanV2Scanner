@@ -5,6 +5,7 @@ import android.os.Bundle
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.core.content.FileProvider
 import android.widget.*
 import java.io.File
 import java.text.SimpleDateFormat
@@ -103,7 +104,9 @@ class MainActivity : Activity() {
     private fun shareFile(file:File,mime:String) {
         val intent=Intent(Intent.ACTION_SEND).apply {
             type=mime
-            putExtra(Intent.EXTRA_STREAM,Uri.parse("content://${file.name}"))
+            putExtra(Intent.EXTRA_STREAM, FileProvider.getUriForFile(
+                this, "${packageName}.fileprovider", file))
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         }
         // 某些 Android 版本不接受裸 file URI；這裡先提供系統分享入口。
         // 若系統拒絕 URI，使用「匯出」功能將檔案放到 App 外部檔案區。
