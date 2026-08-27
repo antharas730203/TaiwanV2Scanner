@@ -91,20 +91,30 @@ class MainActivity : Activity() {
         status.text = "排程：${if(auto.isChecked) "已啟用" else "未啟用"}"
 
         save.setOnClickListener {
-            prefs.edit()
+            val saved = prefs.edit()
                 .putBoolean("auto", auto.isChecked)
                 .putBoolean("auto_upload", autoUpload.isChecked)
                 .putString("gateway_host", host.text.toString().trim())
                 .putString("gateway_port", port.text.toString().trim())
-                .apply()
+                .commit()
             if (auto.isChecked) ScanScheduler.schedule(this) else ScanScheduler.cancel(this)
-            status.text = if(auto.isChecked) "排程已啟用：09:05 起每60分鐘" else "排程已關閉"
+            status.text = if(auto.isChecked) {
+                "排程已啟用：09:05 起每60分鐘｜自動傳送：${if (autoUpload.isChecked) "已啟用" else "未啟用"}"
+            } else {
+                "排程已關閉｜自動傳送：${if (autoUpload.isChecked) "已啟用" else "未啟用"}"
+            }
         }
 
         scan.setOnClickListener {
             scan.isEnabled = false
             status.text = "完整測試執行中……"
-            ScanWorker.run(this) { report ->
+            // 直接把目前畫面上的自動傳送設定傳給本次掃描，避免舊版偏好設定不同步。
+            ScanWorker.run(
+                this,
+                autoUpload.isChecked,
+                host.text.toString().trim(),
+                port.text.toString().trim()
+            ) { report ->
                 runOnUiThread {
                     status.text = "測試完成"
                     result.text = report
@@ -176,7 +186,13 @@ class MainActivity : Activity() {
 }
 
 object ScanWorker {
-    fun run(context:Context,done:(String)->Unit) {
+    fun run(
+        context: Context,
+        forceAutoUpload: Boolean? = null,
+        forceHost: String? = null,
+        forcePort: String? = null,
+        done: (String) -> Unit
+    ) {
         Thread {
             try {
                 val codes=Market.fetchCodes()
@@ -222,11 +238,13 @@ object ScanWorker {
                     .putString("last_time",stamp).apply()
 
                 val settings = context.getSharedPreferences("settings",0)
-                val autoUpload = settings.getBoolean("auto_upload", false)
+                val autoUpload = forceAutoUpload ?: settings.getBoolean("auto_upload", false)
+                val gatewayHost = forceHost ?: settings.getString("gateway_host", "")?.trim().orEmpty()
+                val gatewayPort = forcePort ?: settings.getString("gateway_port", "8080")?.trim().orEmpty()
                 val uploadReport = if (autoUpload) {
                     GatewayUploader.uploadJson(
-                        settings.getString("gateway_host", "")?.trim().orEmpty(),
-                        settings.getString("gateway_port", "8080")?.trim().orEmpty(),
+                        gatewayHost,
+                        gatewayPort,
                         json,
                         "TaiwanV2Scanner_$stamp.json"
                     )
