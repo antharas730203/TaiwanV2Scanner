@@ -1,4 +1,11 @@
-# Taiwan V2 Scanner V0.1
-先測試 Android 手機直接連 TWSE MIS 取得上市個股即時行情。
-預設 2426 鼎元；目前只需 INTERNET 權限，沒有廣告或追蹤 SDK。
-GitHub Actions 會自動建置 debug APK，完成後從 workflow Artifacts 下載。
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <application android:theme="@style/AppTheme" android:label="台股 V2 掃描器" android:allowBackup="false">
+        <activity android:name=".MainActivity" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
