@@ -16,3 +16,6 @@
 - Port：8080
 
 注意：目前 Gateway 使用區域網路 HTTP；手機與 Scanner 必須在可互通的網路。
+
+
+V0.5.5 FIXED2: 修正「測試傳送最後一次 JSON」讀取錯誤的 SharedPreferences 區域。掃描結果儲存在 scan，不是 settings。

@@ -117,7 +117,7 @@ class MainActivity : Activity() {
         exportCsv.setOnClickListener { exportLast("csv") }
         shareJson.setOnClickListener { shareLastJson() }
         testUpload.setOnClickListener {
-            val content = prefs.getString("last_json", null)
+            val content = getSharedPreferences("scan",0).getString("last_json", null)
             if (content == null) {
                 Toast.makeText(this, "請先完成一次掃描。", Toast.LENGTH_LONG).show()
             } else {
