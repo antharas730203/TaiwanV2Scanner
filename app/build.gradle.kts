@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
+
 android {
     namespace = "tw.v2scanner"
     compileSdk = 35
@@ -9,8 +10,8 @@ android {
         applicationId = "tw.v2scanner"
         minSdk = 26
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.5.5"
+        versionCode = 8
+        versionName = "0.6.2"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -21,4 +22,5 @@ android {
 
 dependencies {
     implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 }

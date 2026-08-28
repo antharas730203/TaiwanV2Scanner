@@ -1,21 +1,25 @@
-# TaiwanV2Scanner V0.5.5 Gateway（修正版）
+# TaiwanV2Scanner V0.6.2
 
-本版修正 V0.5.5 Gateway 測試版的 Kotlin 編譯錯誤，補齊 MainActivity 的 Gateway 控制項與 settings prefs。
+台股掃描器 Android 專案。
 
-功能：
-- 09:05 起每小時盤中自動掃描
-- TWSE 上市清單動態取得
-- 批次完整性測試與重試
-- JSON / CSV 保存、匯出、分享
-- Gateway IP / Port 設定
-- 「測試傳送最後一次 JSON」
-- 掃描完成後自動 PUT 上傳 JSON 到 SHTTPS Gateway
+## V0.6.2 重點
+- TWSE + TPEX 動態股票清單；不寫死 1095。
+- 正式掃描預設 150 檔/批；完整率低於 90% 時自動降為 125、100、75、50。
+- 手動測試固定抓 150 檔單批，用來診斷即時資料取得穩定性。
+- 排程時間可自由輸入；預設 09:05,10:05,11:05,12:05,13:05。
+- AlarmManager 只負責喚醒，實際掃描交給 WorkManager，並留下排程/Worker/網路/批次診斷紀錄。
+- GitHub 自動上傳：成功完整掃描寫入 scanner_data/latest.json，並保存 history/YYYYMMDD_HHmmss.json。
+- 完整率低於 90% 不覆蓋 latest.json，改存 scanner_data/failed/。
+- GitHub Token 不寫入程式碼，於 App 中輸入並使用 Android Keystore AES-GCM 加密保存。
+- 保留 JSON/CSV 匯出與分享功能。
 
-預設 Gateway：
-- IP：192.168.1.103
-- Port：8080
+## GitHub 設定
+App 內預設：
+- owner: antharas730203
+- repo: TaiwanV2Scanner
+- branch: main
 
-注意：目前 Gateway 使用區域網路 HTTP；手機與 Scanner 必須在可互通的網路。
+Token 需要對該 Repository 具備 Contents: Read and write。
 
-
-V0.5.5 FIXED2: 修正「測試傳送最後一次 JSON」讀取錯誤的 SharedPreferences 區域。掃描結果儲存在 scan，不是 settings。
+## 編譯
+GitHub Actions 會使用 Gradle 8.7 與 Android SDK 35 建立 debug APK。
