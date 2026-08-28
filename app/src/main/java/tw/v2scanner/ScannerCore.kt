@@ -386,17 +386,23 @@ object GitHubTokenStore {
         context.getSharedPreferences(PREFS, 0).edit().putString(TOKEN_KEY, value).apply()
     }
 
-    fun load(context: Context): String? = try {
-        val stored = context.getSharedPreferences(PREFS, 0).getString(TOKEN_KEY, null) ?: return null
-        val bytes = Base64.decode(stored, Base64.NO_WRAP)
-        val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        val key = ks.getKey(ALIAS, null) as? SecretKey ?: return null
-        val iv = bytes.copyOfRange(0, 12)
-        val payload = bytes.copyOfRange(12, bytes.size)
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
-        String(cipher.doFinal(payload), Charsets.UTF_8)
-    } catch (_: Exception) { null }
+    fun load(context: Context): String? {
+        return try {
+            val stored = context.getSharedPreferences(PREFS, 0).getString(TOKEN_KEY, null)
+                ?: return null
+            val bytes = Base64.decode(stored, Base64.NO_WRAP)
+            val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            val key = ks.getKey(ALIAS, null) as? SecretKey ?: return null
+            if (bytes.size <= 12) return null
+            val iv = bytes.copyOfRange(0, 12)
+            val payload = bytes.copyOfRange(12, bytes.size)
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, iv))
+            String(cipher.doFinal(payload), Charsets.UTF_8)
+        } catch (_: Exception) {
+            null
+        }
+    }
 }
 
 object GitHubUploader {
@@ -471,10 +477,18 @@ object GitHubUploader {
         }
         return try {
             val code = conn.responseCode
-            if (code == 404) null
-            else if (code !in 200..299) throw IllegalStateException("讀取 $path HTTP $code")
-            else org.json.JSONObject(conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }).optString("sha").takeIf { it.isNotBlank() }
-        } finally { conn.disconnect() }
+            if (code == 404) {
+                null
+            } else if (code !in 200..299) {
+                throw IllegalStateException("讀取 $path HTTP $code")
+            } else {
+                org.json.JSONObject(
+                    conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
+                ).optString("sha").takeIf { it.isNotBlank() }
+            }
+        } finally {
+            conn.disconnect()
+        }
     }
 
     private fun extractMessage(body: String): String = try { JSONObject(body).optString("message").ifBlank { body.take(160) } } catch (_: Exception) { body.take(160) }
