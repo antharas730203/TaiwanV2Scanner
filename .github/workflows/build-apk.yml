@@ -22,5 +22,5 @@ jobs:
       - run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: TaiwanV2Scanner-v0.6.0-debug
+          name: TaiwanV2Scanner-v0.6.2-debug
           path: app/build/outputs/apk/debug/app-debug.apk
