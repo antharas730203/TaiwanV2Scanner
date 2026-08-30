@@ -14,6 +14,8 @@ import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.RadioButton
+import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
@@ -31,6 +33,7 @@ class MainActivity : Activity() {
     private lateinit var result: TextView
     private lateinit var auto: CheckBox
     private lateinit var autoGitHub: CheckBox
+    private lateinit var scheduleModeGroup: RadioGroup
     private lateinit var scheduleTimes: EditText
     private lateinit var githubOwner: EditText
     private lateinit var githubRepo: EditText
@@ -54,13 +57,13 @@ class MainActivity : Activity() {
         }
 
         val title = TextView(this).apply {
-            text = "台股 V2 掃描器 V0.6.4"
+            text = "台股 V2 掃描器 V0.6.5"
             textSize = 24f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.rgb(30, 33, 38))
         }
         val subtitle = TextView(this).apply {
-            text = "上市＋上櫃・動態筆數・150檔基準・自動降批・可編輯排程・GitHub同步"
+            text = "上市＋上櫃・動態筆數・150檔基準・自動降批・交易/測試排程・GitHub同步"
             textSize = 13.5f
             setTextColor(Color.rgb(95, 100, 110))
             setPadding(0, dp(2), 0, dp(10))
@@ -79,10 +82,14 @@ class MainActivity : Activity() {
             textSize = 15.5f
             setTextColor(Color.rgb(30, 33, 38))
             setPadding(0, dp(4), 0, 0)
+            minLines = 2
+            maxLines = 5
+            setHorizontallyScrolling(false)
         }
         statusCard.addView(statusLabel)
         statusCard.addView(status)
-        root.addView(statusCard, LinearLayout.LayoutParams(-1, dp(72)))
+        statusCard.minimumHeight = dp(72)
+        root.addView(statusCard, LinearLayout.LayoutParams(-1, LinearLayout.LayoutParams.WRAP_CONTENT))
 
         val configScroll = ScrollView(this).apply {
             isFillViewport = true
@@ -95,7 +102,7 @@ class MainActivity : Activity() {
         configScroll.addView(config)
 
         auto = CheckBox(this).apply {
-            text = "啟用盤中自動掃描"
+            text = "啟用自動排程"
             textSize = 15f
             isChecked = prefs.getBoolean("auto", false)
         }
@@ -106,6 +113,27 @@ class MainActivity : Activity() {
         }
         config.addView(auto)
         config.addView(autoGitHub)
+
+        val modeLabel = sectionLabel("排程模式")
+        config.addView(modeLabel)
+        scheduleModeGroup = RadioGroup(this).apply {
+            orientation = LinearLayout.VERTICAL
+        }
+        val tradingMode = RadioButton(this).apply {
+            id = View.generateViewId()
+            text = "交易時段模式（平日 09:00～13:30）"
+            textSize = 15f
+            isChecked = prefs.getString("schedule_mode", "trading") != "test"
+        }
+        val testMode = RadioButton(this).apply {
+            id = View.generateViewId()
+            text = "測試模式（不限交易時段）"
+            textSize = 15f
+            isChecked = prefs.getString("schedule_mode", "trading") == "test"
+        }
+        scheduleModeGroup.addView(tradingMode)
+        scheduleModeGroup.addView(testMode)
+        config.addView(scheduleModeGroup)
 
         val scheduleLabel = sectionLabel("排程時間（可自訂）")
         config.addView(scheduleLabel)
@@ -226,13 +254,14 @@ class MainActivity : Activity() {
                 prefs.edit()
                     .putBoolean("auto", auto.isChecked)
                     .putBoolean("github_auto_upload", autoGitHub.isChecked)
+                    .putString("schedule_mode", if (tradingMode.isChecked) "trading" else "test")
                     .putString("schedule_times", normalizedTimes)
                     .putString("github_owner", githubOwner.text.toString().trim())
                     .putString("github_repo", githubRepo.text.toString().trim())
                     .putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" })
                     .apply()
                 if (auto.isChecked) ScanScheduler.schedule(this, normalizedTimes) else ScanScheduler.cancel(this)
-                status.text = "設定已儲存\n排程：${if (auto.isChecked) normalizedTimes else "未啟用"}｜GitHub：${if (autoGitHub.isChecked && GitHubTokenStore.hasToken(this)) "已啟用" else "未啟用"}"
+                status.text = "設定已儲存\n模式：${if (tradingMode.isChecked) "交易時段" else "測試/不限時段"}｜排程：${if (auto.isChecked) normalizedTimes else "未啟用"}\nGitHub：${if (autoGitHub.isChecked && GitHubTokenStore.hasToken(this)) "已啟用" else "未啟用"}"
                 githubToken.setText("")
                 githubToken.hint = "GitHub Token（已設定；留白保留）"
             } catch (e: Exception) {
@@ -310,7 +339,7 @@ class MainActivity : Activity() {
                 setRequestProperty("Authorization", "Bearer $token")
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.4")
+                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.5")
             }
             val code = conn.responseCode
             val body = try {
@@ -342,15 +371,18 @@ class MainActivity : Activity() {
     private fun refreshStatus() {
         val tokenText = if (GitHubTokenStore.hasToken(this)) "已設定" else "未設定"
         val times = prefs.getString("schedule_times", ScanScheduler.DEFAULT_TIMES) ?: ScanScheduler.DEFAULT_TIMES
-        status.text = "排程：${if (auto.isChecked) "已啟用" else "未啟用"}｜${times}\nGitHub Token：$tokenText"
+        val mode = if (prefs.getString("schedule_mode", "trading") == "test") "測試/不限時段" else "交易時段 09:00～13:30"
+        status.text = "排程：${if (auto.isChecked) "已啟用" else "未啟用"}｜$mode\n時間：$times\nGitHub Token：$tokenText"
     }
 
     private fun showDiagnostics() {
         val p = getSharedPreferences("diagnostics", 0)
         result.text = buildString {
             append("排程診斷\n\n")
+            append("排程模式：${p.getString("schedule_mode", "trading")}\n")
             append("排程設定：${p.getString("schedule_configured", "無")}\n")
             append("最近排程觸發：${p.getString("last_schedule_trigger", "無")}\n")
+            append("最近排程跳過：${p.getString("last_schedule_skip", "無")}\n")
             append("排程當時網路：${p.getString("last_schedule_network", "無")}\n")
             append("最近 Worker 啟動：${p.getString("last_worker_started", "無")}\n")
             append("最近掃描開始：${p.getString("last_run_started", "無")}\n")
