@@ -144,10 +144,11 @@ class MainActivity : Activity() {
         ).apply {
             inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
         }
-        githubAdvanced.addView(githubOwner, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(5) })
-        githubAdvanced.addView(githubRepo, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(5) })
-        githubAdvanced.addView(githubBranch, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(5) })
-        githubAdvanced.addView(githubToken, LinearLayout.LayoutParams(-1, dp(48)))
+        val githubAdvancedLayout = githubAdvanced as LinearLayout
+        githubAdvancedLayout.addView(githubOwner, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(5) })
+        githubAdvancedLayout.addView(githubRepo, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(5) })
+        githubAdvancedLayout.addView(githubBranch, LinearLayout.LayoutParams(-1, dp(48)).apply { bottomMargin = dp(5) })
+        githubAdvancedLayout.addView(githubToken, LinearLayout.LayoutParams(-1, dp(48)))
         config.addView(githubAdvanced)
         advancedToggle.setOnClickListener {
             githubAdvanced.visibility = if (githubAdvanced.visibility == View.VISIBLE) View.GONE else View.VISIBLE
