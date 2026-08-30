@@ -456,6 +456,7 @@ object GitHubUploader {
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
+            setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.4")
         }
         conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
         val code = conn.responseCode
@@ -474,13 +475,15 @@ object GitHubUploader {
             setRequestProperty("Authorization", "Bearer $token")
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+            setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.4")
         }
         return try {
             val code = conn.responseCode
             if (code == 404) {
                 null
             } else if (code !in 200..299) {
-                throw IllegalStateException("讀取 $path HTTP $code")
+                val body = try { conn.errorStream?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty() } catch (_: Exception) { "" }
+                throw IllegalStateException("讀取 $path HTTP $code ${extractMessage(body)}")
             } else {
                 org.json.JSONObject(
                     conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }

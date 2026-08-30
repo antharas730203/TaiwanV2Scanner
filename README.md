@@ -1,8 +1,8 @@
-# TaiwanV2Scanner V0.6.2
+# TaiwanV2Scanner V0.6.4
 
 台股掃描器 Android 專案。
 
-## V0.6.2 重點
+## V0.6.4 重點
 - TWSE + TPEX 動態股票清單；不寫死 1095。
 - 正式掃描預設 150 檔/批；完整率低於 90% 時自動降為 125、100、75、50。
 - 手動測試固定抓 150 檔單批，用來診斷即時資料取得穩定性。
@@ -23,3 +23,10 @@ Token 需要對該 Repository 具備 Contents: Read and write。
 
 ## 編譯
 GitHub Actions 會使用 Gradle 8.7 與 Android SDK 35 建立 debug APK。
+
+
+### V0.6.4
+- UI：保留較大的執行結果區，設定區可收合。
+- GitHub：新增「驗證 GitHub Token」按鈕，先驗證 Repository 存取，再測試 JSON 寫入。
+- 401：GitHub API 錯誤會顯示更明確的 Token／權限原因。
+- 版本：0.6.4。
