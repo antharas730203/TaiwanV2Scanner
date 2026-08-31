@@ -458,19 +458,18 @@ object GitHubUploader {
                 "test" -> "test"
                 else -> if (valid) "history" else "failed"
             }
-            val archivePath = "scanner_data/$category/${stamp}.json"
-            val archive = putFile(token, owner, repo, branch, archivePath, json, "Add scanner $category $stamp")
-            val splitUploads = if (valid || mode == "test") {
-                val twseUpload = putFile(token, owner, repo, branch, "scanner_data/Raster_TWSE.json", twse.toString(), "Update Raster_TWSE $stamp")
-                val tpexUpload = putFile(token, owner, repo, branch, "scanner_data/Raster_TPEX.json", tpex.toString(), "Update Raster_TPEX $stamp")
-                "$twseUpload｜$tpexUpload"
-            } else "不更新 Raster_TWSE/Raster_TPEX（完整率不足）"
+            // History is split by market so each historical file remains small enough to read.
+            val historyTwsePath = "scanner_data/$category/${stamp}_TWSE.json"
+            val historyTpexPath = "scanner_data/$category/${stamp}_TPEX.json"
+            val historyTwse = if (valid || mode == "test") putFile(token, owner, repo, branch, historyTwsePath, twse.toString(), "Add scanner $category TWSE $stamp") else "不保存 TWSE（完整率不足）"
+            val historyTpex = if (valid || mode == "test") putFile(token, owner, repo, branch, historyTpexPath, tpex.toString(), "Add scanner $category TPEX $stamp") else "不保存 TPEX（完整率不足）"
             if (mode == "full" && valid) {
-                val latest = putFile(token, owner, repo, branch, "scanner_data/latest.json", json, "Update scanner latest.json $stamp")
-                "$latest｜$archive｜$splitUploads"
+                val latestTwse = putFile(token, owner, repo, branch, "scanner_data/latest_TWSE.json", twse.toString(), "Update latest_TWSE $stamp")
+                val latestTpex = putFile(token, owner, repo, branch, "scanner_data/latest_TPEX.json", tpex.toString(), "Update latest_TPEX $stamp")
+                "$latestTwse｜$latestTpex｜$historyTwse｜$historyTpex"
             } else {
-                val reason = if (mode == "full" && !valid) "完整率 ${"%.2f".format(rate)}% < ${MIN_RATE.toInt()}%，不更新 latest.json" else "測試資料不覆蓋 latest.json"
-                "$archive｜$splitUploads｜$reason"
+                val reason = if (mode == "full" && !valid) "完整率 ${"%.2f".format(rate)}% < ${MIN_RATE.toInt()}%，不更新 latest_TWSE/latest_TPEX" else "測試資料不覆蓋 latest_TWSE/latest_TPEX"
+                "$historyTwse｜$historyTpex｜$reason"
             }
         } catch (e: Exception) {
             "失敗：GitHub ${e.javaClass.simpleName} - ${e.message ?: "無詳細訊息"}"
@@ -495,7 +494,7 @@ object GitHubUploader {
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.5")
+            setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.6")
         }
         conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
         val code = conn.responseCode
@@ -514,7 +513,7 @@ object GitHubUploader {
             setRequestProperty("Authorization", "Bearer $token")
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-            setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.5")
+            setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.6")
         }
         return try {
             val code = conn.responseCode
@@ -607,15 +606,19 @@ class ScanAlarmReceiver : android.content.BroadcastReceiver() {
         val prefs = context.getSharedPreferences(PREF_SETTINGS, 0)
         if (!prefs.getBoolean("auto", false)) return
         val mode = prefs.getString("schedule_mode", "trading") ?: "trading"
-        if (mode == "trading" && !ScanScheduler.isTradingSessionNow()) {
-            val reason = ScanScheduler.tradingSessionSkipReason()
-            ScheduleDiagnostics.mark(context, "last_schedule_skip", reason)
-            ScheduleDiagnostics.mark(context, "last_schedule_mode", "trading")
-            return
-        }
         ScheduleDiagnostics.mark(context, "last_schedule_trigger")
         ScheduleDiagnostics.mark(context, "last_schedule_mode", mode)
         ScheduleDiagnostics.mark(context, "last_schedule_network", NetworkState.summary(context))
+        if (mode == "trading") {
+            val marketStatus = MarketStatus.check()
+            ScheduleDiagnostics.mark(context, "last_market_status", marketStatus.reason)
+            ScheduleDiagnostics.mark(context, "last_market_status_source", marketStatus.source)
+            ScheduleDiagnostics.mark(context, "last_market_status_sample", marketStatus.sampleReturned.toString())
+            if (!marketStatus.ok) {
+                ScheduleDiagnostics.mark(context, "last_schedule_skip", marketStatus.reason)
+                return
+            }
+        }
         val request = OneTimeWorkRequestBuilder<ScheduledScanWorker>()
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .addTag("taiwan_v2_scheduled_scan")
