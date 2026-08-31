@@ -57,7 +57,7 @@ class MainActivity : Activity() {
         }
 
         val title = TextView(this).apply {
-            text = "台股 V2 掃描器 V0.6.6"
+            text = "台股 V2 掃描器 V0.6.7"
             textSize = 24f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.rgb(30, 33, 38))
@@ -189,7 +189,7 @@ class MainActivity : Activity() {
         }
         val row1 = buttonRow()
         val save = actionButton("儲存設定／排程")
-        scan = actionButton("手動測試：150檔／1批")
+        scan = actionButton("手動測試：完整流程")
         row1.addView(save, buttonWeightParams())
         row1.addView(scan, buttonWeightParams().apply { leftMargin = dp(6) })
         actionGrid.addView(row1)
@@ -236,7 +236,7 @@ class MainActivity : Activity() {
             textSize = 15f
             setTextColor(Color.rgb(45, 50, 58))
             setLineSpacing(0f, 1.08f)
-            text = "尚未執行掃描。\n\n手動測試會以 150 檔／1 批執行；完整掃描則依動態清單與自動降批機制執行。"
+            text = "尚未執行掃描。\n\n手動測試會執行完整掃描流程，與自動排程共用掃描核心。"
         }
         resultScroll.addView(result)
         resultCard.addView(resultScroll, LinearLayout.LayoutParams(-1, -1))
@@ -271,10 +271,10 @@ class MainActivity : Activity() {
 
         scan.setOnClickListener {
             scan.isEnabled = false
-            status.text = "手動150檔／1批掃描中……"
-            result.text = "正在取得動態上市／上櫃清單並執行 150 檔單批測試……"
+            status.text = "手動完整掃描中……"
+            result.text = "正在執行與自動排程相同的完整掃描流程……"
             Thread {
-                val report = ScanEngine.runManual150(this)
+                val report = ScanEngine.runFull(this)
                 runOnUiThread {
                     result.text = report
                     status.text = "手動測試完成"
@@ -339,7 +339,7 @@ class MainActivity : Activity() {
                 setRequestProperty("Authorization", "Bearer $token")
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.4")
+                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.7")
             }
             val code = conn.responseCode
             val body = try {
