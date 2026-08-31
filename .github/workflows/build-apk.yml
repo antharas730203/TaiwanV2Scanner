@@ -7,9 +7,33 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
+      - name: Promote source to v0.6.7
+        shell: bash
+        run: |
+          set -e
+          # Version bump: 0.6.6 -> 0.6.7 / code 11 -> 12
+          sed -i 's/versionCode = 11/versionCode = 12/' app/build.gradle.kts
+          sed -i 's/versionName = "0.6.6"/versionName = "0.6.7"/' app/build.gradle.kts
+          sed -i 's/台股 V2 掃描器 V0.6.6/台股 V2 掃描器 V0.6.7/g' app/src/main/java/tw/v2scanner/MainActivity.kt
+          sed -i 's/TaiwanV2Scanner\/0.6.4/TaiwanV2Scanner\/0.6.7/g' app/src/main/java/tw/v2scanner/MainActivity.kt
+          # Manual test must use the same full scan core as scheduled execution.
+          sed -i 's/scan.isOnClickListener/scan.isOnClickListener/g' app/src/main/java/tw/v2scanner/MainActivity.kt
+          sed -i 's/手動測試：150檔／1批/手動測試：完整流程/g' app/src/main/java/tw/v2scanner/MainActivity.kt
+          sed -i 's/手動150檔／1批掃描中……/手動完整掃描中……/g' app/src/main/java/tw/v2scanner/MainActivity.kt
+          sed -i 's/正在取得動態上市／上櫃清單並執行 150 檔單批測試……/正在執行與自動排程相同的完整掃描流程……/g' app/src/main/java/tw/v2scanner/MainActivity.kt
+          sed -i 's/ScanEngine\.runManual150(this)/ScanEngine.runFull(this)/g' app/src/main/java/tw/v2scanner/MainActivity.kt
+          sed -i 's/手動測試會以 150 檔／1 批執行；完整掃描則依動態清單與自動降批機制執行。/手動測試會執行完整掃描流程，與自動排程共用掃描核心。/g' app/src/main/java/tw/v2scanner/MainActivity.kt
+          # Persist the promoted source so the repository itself is v0.6.7.
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet; then
+            git add app/build.gradle.kts app/src/main/java/tw/v2scanner/MainActivity.kt
+            git commit -m "release: promote TaiwanV2Scanner to v0.6.7"
+            git push
+          fi
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -22,5 +46,5 @@ jobs:
       - run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: TaiwanV2Scanner-v0.6.6-debug
+          name: TaiwanV2Scanner-v0.6.7-debug
           path: app/build/outputs/apk/debug/app-debug.apk
