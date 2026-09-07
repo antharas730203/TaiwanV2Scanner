@@ -1,10 +1,12 @@
 package tw.v2scanner
 
 import android.app.Activity
+import android.graphics.Color
 import android.os.Bundle
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.CheckBox
 import android.widget.EditText
@@ -32,6 +34,8 @@ class MainActivity : Activity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.statusBarColor = Color.BLACK
+        window.navigationBarColor = Color.BLACK
         showMain()
     }
 
@@ -87,6 +91,7 @@ class MainActivity : Activity() {
             setPadding(dp(8), dp(8), dp(8), dp(8))
         }
         root.addView(ScrollView(this).apply { addView(result) }, LinearLayout.LayoutParams(-1, 0, 1f))
+        applyDarkTheme(root)
         return root
     }
 
@@ -154,7 +159,23 @@ class MainActivity : Activity() {
 
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
         root.addView(button("返回主畫面").apply { setOnClickListener { showMain() } })
+        applyDarkTheme(root)
         return root
+    }
+
+    private fun applyDarkTheme(view: View) {
+        view.setBackgroundColor(Color.BLACK)
+        if (view is TextView) {
+            view.setTextColor(Color.WHITE)
+            if (view is EditText) view.setHintTextColor(Color.GRAY)
+        }
+        if (view is Button) {
+            view.setBackgroundColor(Color.rgb(45, 45, 45))
+            view.setTextColor(Color.WHITE)
+        }
+        if (view is ViewGroup) {
+            for (i in 0 until view.childCount) applyDarkTheme(view.getChildAt(i))
+        }
     }
 
     private fun runFullScan(scanButton: View) {
