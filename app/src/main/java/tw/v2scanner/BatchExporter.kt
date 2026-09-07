@@ -23,7 +23,6 @@ object BatchExporter {
         if (dir.exists()) dir.deleteRecursively()
         check(dir.mkdirs()) { "無法建立批次資料夾：${dir.absolutePath}" }
 
-        // Layer 1 is a derived result. The original fullJson is never modified.
         val records = ArrayList<StockRecord>(stocks.length())
         for (i in 0 until stocks.length()) {
             val stock = stocks.optJSONObject(i) ?: continue
@@ -31,6 +30,8 @@ object BatchExporter {
             records += StockRecord(market, stock)
         }
         val layer1Json = Layer1Scanner.buildResult(stamp, records, topN = 100)
+        val layer1Root = JSONObject(layer1Json)
+        val layer1Count = layer1Root.optInt("qualified_count", 0)
         File(dir, "layer1_result.json").writeText(layer1Json, Charsets.UTF_8)
         File(baseDir, "layer1_latest.json").writeText(layer1Json, Charsets.UTF_8)
         File(dir, "layer1_status.json").writeText(
@@ -38,11 +39,17 @@ object BatchExporter {
                 put("status", "LAYER1_COMPLETE")
                 put("scan_time", stamp)
                 put("source_records", records.size)
+                put("qualified_count", layer1Count)
                 put("completed_at", System.currentTimeMillis())
                 put("result_file", "layer1_result.json")
             }.toString(),
             Charsets.UTF_8
         )
+        context.getSharedPreferences("diagnostics", 0).edit()
+            .putString("layer1_status", "LAYER1_COMPLETE")
+            .putInt("layer1_count", layer1Count)
+            .putInt("layer1_source_records", records.size)
+            .apply()
 
         val index = JSONArray()
         var current = ArrayList<JSONObject>()
@@ -109,6 +116,7 @@ object BatchExporter {
             put("max_batch_characters", maxChars)
             put("layer1_file", "layer1_result.json")
             put("layer1_status", "LAYER1_COMPLETE")
+            put("layer1_count", layer1Count)
             put("batches", index)
         }
         File(dir, "batch_index.json").writeText(indexRoot.toString(), Charsets.UTF_8)
