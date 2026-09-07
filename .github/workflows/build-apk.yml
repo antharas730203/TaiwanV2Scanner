@@ -1,8 +1,10 @@
 name: Build Android APK
+
 on:
   workflow_dispatch:
   push:
     branches: ["main", "master"]
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -10,30 +12,62 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - name: Promote source to v0.6.7
+
+      - name: Patch v0.6.8 ChatGPT share test
         shell: bash
         run: |
           set -e
-          # Version bump: 0.6.6 -> 0.6.7 / code 11 -> 12
-          sed -i 's/versionCode = 11/versionCode = 12/' app/build.gradle.kts
-          sed -i 's/versionName = "0.6.6"/versionName = "0.6.7"/' app/build.gradle.kts
-          sed -i 's/台股 V2 掃描器 V0.6.6/台股 V2 掃描器 V0.6.7/g' app/src/main/java/tw/v2scanner/MainActivity.kt
-          sed -i 's/TaiwanV2Scanner\/0.6.4/TaiwanV2Scanner\/0.6.7/g' app/src/main/java/tw/v2scanner/MainActivity.kt
-          # Manual test must use the same full scan core as scheduled execution.
-          sed -i 's/scan.isOnClickListener/scan.isOnClickListener/g' app/src/main/java/tw/v2scanner/MainActivity.kt
-          sed -i 's/手動測試：150檔／1批/手動測試：完整流程/g' app/src/main/java/tw/v2scanner/MainActivity.kt
-          sed -i 's/手動150檔／1批掃描中……/手動完整掃描中……/g' app/src/main/java/tw/v2scanner/MainActivity.kt
-          sed -i 's/正在取得動態上市／上櫃清單並執行 150 檔單批測試……/正在執行與自動排程相同的完整掃描流程……/g' app/src/main/java/tw/v2scanner/MainActivity.kt
-          sed -i 's/ScanEngine\.runManual150(this)/ScanEngine.runFull(this)/g' app/src/main/java/tw/v2scanner/MainActivity.kt
-          sed -i 's/手動測試會以 150 檔／1 批執行；完整掃描則依動態清單與自動降批機制執行。/手動測試會執行完整掃描流程，與自動排程共用掃描核心。/g' app/src/main/java/tw/v2scanner/MainActivity.kt
-          # Persist the promoted source so the repository itself is v0.6.7.
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/src/main/java/tw/v2scanner/MainActivity.kt")
+          s = p.read_text(encoding="utf-8")
+
+          if "autoChatGPTShare" not in s:
+              s = s.replace(
+                  '    private lateinit var autoGitHub: CheckBox\n',
+                  '    private lateinit var autoGitHub: CheckBox\n    private lateinit var autoChatGPTShare: CheckBox\n'
+              )
+
+              s = s.replace(
+                  '        autoGitHub = CheckBox(this).apply {\n            text = "掃描完成後自動上傳 GitHub"\n            textSize = 15f\n            isChecked = prefs.getBoolean("github_auto_upload", false)\n        }\n        config.addView(auto)\n        config.addView(autoGitHub)\n',
+                  '        autoGitHub = CheckBox(this).apply {\n            text = "掃描完成後自動上傳 GitHub"\n            textSize = 15f\n            isChecked = prefs.getBoolean("github_auto_upload", false)\n        }\n        autoChatGPTShare = CheckBox(this).apply {\n            text = "掃描完成後自動分享 JSON 給 ChatGPT（測試）"\n            textSize = 15f\n            isChecked = prefs.getBoolean("auto_chatgpt_share", false)\n        }\n        config.addView(auto)\n        config.addView(autoGitHub)\n        config.addView(autoChatGPTShare)\n'
+              )
+
+              s = s.replace(
+                  '                    .putBoolean("github_auto_upload", autoGitHub.isChecked)\n',
+                  '                    .putBoolean("github_auto_upload", autoGitHub.isChecked)\n                    .putBoolean("auto_chatgpt_share", autoChatGPTShare.isChecked)\n'
+              )
+
+              s = s.replace(
+                  '                    result.text = report\n                    status.text = "手動測試完成"\n                    scan.isEnabled = true\n',
+                  '                    result.text = report\n                    status.text = "手動測試完成"\n                    scan.isEnabled = true\n                    if (prefs.getBoolean("auto_chatgpt_share", false)) {\n                        shareLastJson()\n                    }\n'
+              )
+
+              s = s.replace(
+                  '            status.text = "設定已儲存\\n模式：${if (tradingMode.isChecked) "交易時段" else "測試/不限時段"}｜排程：${if (auto.isChecked) normalizedTimes else "未啟用"}\\nGitHub：${if (autoGitHub.isChecked && GitHubTokenStore.hasToken(this)) "已啟用" else "未啟用"}"\n',
+                  '            status.text = "設定已儲存\\n模式：${if (tradingMode.isChecked) "交易時段" else "測試/不限時段"}｜排程：${if (auto.isChecked) normalizedTimes else "未啟用"}\\nGitHub：${if (autoGitHub.isChecked && GitHubTokenStore.hasToken(this)) "已啟用" else "未啟用"}\\nChatGPT 分享：${if (autoChatGPTShare.isChecked) "已啟用（手動掃描測試）" else "未啟用"}"\n'
+              )
+
+              p.write_text(s, encoding="utf-8")
+          PY
+
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path("app/src/main/java/tw/v2scanner/MainActivity.kt")
+          s = p.read_text(encoding="utf-8")
+          s = s.replace("台股 V2 掃描器 V0.6.7", "台股 V2 掃描器 V0.6.8")
+          s = s.replace("TaiwanV2Scanner/0.6.7", "TaiwanV2Scanner/0.6.8")
+          p.write_text(s, encoding="utf-8")
+          PY
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet; then
-            git add app/build.gradle.kts app/src/main/java/tw/v2scanner/MainActivity.kt
-            git commit -m "release: promote TaiwanV2Scanner to v0.6.7"
+            git add app/src/main/java/tw/v2scanner/MainActivity.kt
+            git commit -m "feat: add ChatGPT JSON share test"
             git push
           fi
+
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -46,5 +80,5 @@ jobs:
       - run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: TaiwanV2Scanner-v0.6.7-debug
+          name: TaiwanV2Scanner-v0.6.8-debug
           path: app/build/outputs/apk/debug/app-debug.apk
