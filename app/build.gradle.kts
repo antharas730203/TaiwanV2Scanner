@@ -10,8 +10,8 @@ android {
         applicationId = "tw.v2scanner"
         minSdk = 26
         targetSdk = 35
-        versionCode = 12
-        versionName = "0.6.7"
+        versionCode = 13
+        versionName = "0.6.8"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
