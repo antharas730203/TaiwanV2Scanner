@@ -13,58 +13,134 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Patch v0.6.8 ChatGPT share test
+      - name: Apply v0.6.9 cleanup and 6000-char batch logic
         shell: bash
         run: |
           set -e
           python3 - <<'PY'
           from pathlib import Path
+          import re
+
+          # Remove the temporary ChatGPT auto-share test and the manual GitHub test-upload UI.
           p = Path("app/src/main/java/tw/v2scanner/MainActivity.kt")
           s = p.read_text(encoding="utf-8")
+          s = s.replace('    private lateinit var autoChatGPTShare: CheckBox\n', '')
+          s = s.replace('    private lateinit var testGitHub: Button\n', '')
+          s = re.sub(r'\n\s*autoChatGPTShare = CheckBox\(this\)\.apply \{.*?\n\s*\}\n', '\n', s, flags=re.S)
+          s = s.replace('        config.addView(autoChatGPTShare)\n', '')
+          s = s.replace('                    .putBoolean("auto_chatgpt_share", autoChatGPTShare.isChecked)\n', '')
+          s = re.sub(r'\n\s*if \(prefs\.getBoolean\("auto_chatgpt_share", false\)\) \{\n\s*shareLastJson\(\)\n\s*\}\n', '\n', s, flags=re.S)
+          s = re.sub(r'\n\s*val row2 = buttonRow\(\)\n\s*testGitHub = actionButton\("測試 GitHub 上傳 JSON"\).*?actionGrid\.addView\(row2\)\n', '\n        val row2 = buttonRow()\n        row2.addView(verifyGitHub, buttonWeightParams())\n        actionGrid.addView(row2)\n', s, flags=re.S)
+          s = re.sub(r'\n\s*testGitHub\.setOnClickListener \{.*?\n\s*\}\n\n\s*verifyGitHub\.setOnClickListener', '\n\n        verifyGitHub.setOnClickListener', s, flags=re.S)
+          s = s.replace('台股 V2 掃描器 V0.6.8', '台股 V2 掃描器 V0.6.9')
+          s = s.replace('TaiwanV2Scanner/0.6.8', 'TaiwanV2Scanner/0.6.9')
+          p.write_text(s, encoding="utf-8")
 
-          if "autoChatGPTShare" not in s:
-              s = s.replace(
-                  '    private lateinit var autoGitHub: CheckBox\n',
-                  '    private lateinit var autoGitHub: CheckBox\n    private lateinit var autoChatGPTShare: CheckBox\n'
-              )
+          # Create the new atomic JSON batch exporter.
+          batch = Path("app/src/main/java/tw/v2scanner/BatchExporter.kt")
+          batch.write_text(r'''package tw.v2scanner
 
-              s = s.replace(
-                  '        autoGitHub = CheckBox(this).apply {\n            text = "掃描完成後自動上傳 GitHub"\n            textSize = 15f\n            isChecked = prefs.getBoolean("github_auto_upload", false)\n        }\n        config.addView(auto)\n        config.addView(autoGitHub)\n',
-                  '        autoGitHub = CheckBox(this).apply {\n            text = "掃描完成後自動上傳 GitHub"\n            textSize = 15f\n            isChecked = prefs.getBoolean("github_auto_upload", false)\n        }\n        autoChatGPTShare = CheckBox(this).apply {\n            text = "掃描完成後自動分享 JSON 給 ChatGPT（測試）"\n            textSize = 15f\n            isChecked = prefs.getBoolean("auto_chatgpt_share", false)\n        }\n        config.addView(auto)\n        config.addView(autoGitHub)\n        config.addView(autoChatGPTShare)\n'
-              )
+import android.content.Context
+import org.json.JSONArray
+import org.json.JSONObject
+import java.io.File
 
-              s = s.replace(
-                  '                    .putBoolean("github_auto_upload", autoGitHub.isChecked)\n',
-                  '                    .putBoolean("github_auto_upload", autoGitHub.isChecked)\n                    .putBoolean("auto_chatgpt_share", autoChatGPTShare.isChecked)\n'
-              )
+object BatchExporter {
+    const val CHAR_LIMIT = 6000
 
-              s = s.replace(
-                  '                    result.text = report\n                    status.text = "手動測試完成"\n                    scan.isEnabled = true\n',
-                  '                    result.text = report\n                    status.text = "手動測試完成"\n                    scan.isEnabled = true\n                    if (prefs.getBoolean("auto_chatgpt_share", false)) {\n                        shareLastJson()\n                    }\n'
-              )
+    data class ExportResult(val count: Int, val directory: File, val maxChars: Int)
 
-              s = s.replace(
-                  '            status.text = "設定已儲存\\n模式：${if (tradingMode.isChecked) "交易時段" else "測試/不限時段"}｜排程：${if (auto.isChecked) normalizedTimes else "未啟用"}\\nGitHub：${if (autoGitHub.isChecked && GitHubTokenStore.hasToken(this)) "已啟用" else "未啟用"}"\n',
-                  '            status.text = "設定已儲存\\n模式：${if (tradingMode.isChecked) "交易時段" else "測試/不限時段"}｜排程：${if (auto.isChecked) normalizedTimes else "未啟用"}\\nGitHub：${if (autoGitHub.isChecked && GitHubTokenStore.hasToken(this)) "已啟用" else "未啟用"}\\nChatGPT 分享：${if (autoChatGPTShare.isChecked) "已啟用（手動掃描測試）" else "未啟用"}"\n'
-              )
+    fun export(context: Context, stamp: String, fullJson: String): ExportResult {
+        val root = JSONObject(fullJson)
+        val stocks = root.optJSONArray("stocks") ?: JSONArray()
+        val dir = File(context.getExternalFilesDir(null), "scanner_batches/$stamp")
+        if (dir.exists()) dir.deleteRecursively()
+        dir.mkdirs()
 
-              p.write_text(s, encoding="utf-8")
-          PY
+        val index = JSONArray()
+        var current = JSONArray()
+        var batchNo = 1
+        var maxChars = 0
 
-          python3 - <<'PY'
-          from pathlib import Path
-          p = Path("app/src/main/java/tw/v2scanner/MainActivity.kt")
+        fun buildText(batch: JSONArray, number: Int): String {
+            val first = batch.optJSONObject(0)?.optString("c").orEmpty()
+            val last = batch.optJSONObject(batch.length() - 1)?.optString("c").orEmpty()
+            return JSONObject().apply {
+                put("scan_time", root.optString("scan_time", stamp))
+                put("mode", root.optString("mode", "FULL"))
+                put("batch", number)
+                put("stock_start", first)
+                put("stock_end", last)
+                put("stock_count", batch.length())
+                put("char_limit", CHAR_LIMIT)
+                put("stocks", batch)
+            }.toString()
+        }
+
+        fun flush() {
+            if (current.length() == 0) return
+            val text = buildText(current, batchNo)
+            require(text.length <= CHAR_LIMIT) { "Batch $batchNo 超過 ${CHAR_LIMIT} 字元：${text.length}" }
+            File(dir, "batch_%03d.json".format(batchNo)).writeText(text, Charsets.UTF_8)
+            index.put(JSONObject().apply {
+                put("batch", batchNo)
+                put("stock_start", current.optJSONObject(0)?.optString("c").orEmpty())
+                put("stock_end", current.optJSONObject(current.length() - 1)?.optString("c").orEmpty())
+                put("stock_count", current.length())
+                put("characters", text.length)
+                put("file", "batch_%03d.json".format(batchNo))
+            })
+            maxChars = maxOf(maxChars, text.length)
+            current = JSONArray()
+            batchNo++
+        }
+
+        for (i in 0 until stocks.length()) {
+            val stock = stocks.optJSONObject(i) ?: continue
+            val candidate = JSONArray()
+            for (j in 0 until current.length()) candidate.put(current.getJSONObject(j))
+            candidate.put(stock)
+            if (current.length() > 0 && buildText(candidate, batchNo).length > CHAR_LIMIT) {
+                flush()
+            }
+            current.put(stock)
+        }
+        flush()
+
+        val indexRoot = JSONObject().apply {
+            put("scan_time", root.optString("scan_time", stamp))
+            put("mode", root.optString("mode", "FULL"))
+            put("char_limit", CHAR_LIMIT)
+            put("stock_count", stocks.length())
+            put("batch_count", index.length())
+            put("max_batch_characters", maxChars)
+            put("batches", index)
+        }
+        File(dir, "batch_index.json").writeText(indexRoot.toString(), Charsets.UTF_8)
+        return ExportResult(index.length(), dir, maxChars)
+    }
+}
+''', encoding="utf-8")
+
+          # Hook batch generation into every full scan without changing the original full JSON.
+          p = Path("app/src/main/java/tw/v2scanner/ScannerCore.kt")
           s = p.read_text(encoding="utf-8")
-          s = s.replace("台股 V2 掃描器 V0.6.7", "台股 V2 掃描器 V0.6.8")
-          s = s.replace("TaiwanV2Scanner/0.6.7", "TaiwanV2Scanner/0.6.8")
+          needle = '            ScanPersistence.saveResult(context, json, csv, stamp)\n'
+          replacement = needle + '            val batches = BatchExporter.export(context, stamp, json)\n'
+          if 'BatchExporter.export(context, stamp, json)' not in s:
+              if needle not in s:
+                  raise SystemExit('Cannot find ScanPersistence.saveResult hook')
+              s = s.replace(needle, replacement, 1)
+          s = s.replace('                .putInt("last_final_batch", result.finalBatchSize)\n', '                .putInt("last_final_batch", result.finalBatchSize)\n                .putInt("last_safe_batch_count", batches.count)\n                .putInt("last_safe_batch_max_chars", batches.maxChars)\n')
+          s = s.replace('            "完整市場掃描\\n上市：${result.markets.first { it.market == "TWSE" }.codes.size} 檔｜上櫃：${result.markets.first { it.market == "TPEX" }.codes.size} 檔\\n全市場：${result.expected} 檔\\n', '            "完整市場掃描\\n上市：${result.markets.first { it.market == "TWSE" }.codes.size} 檔｜上櫃：${result.markets.first { it.market == "TPEX" }.codes.size} 檔\\n全市場：${result.expected} 檔\\n安全批次：${batches.count} 批｜每批 ≤ ${BatchExporter.CHAR_LIMIT} 字元\\n')
           p.write_text(s, encoding="utf-8")
           PY
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet; then
-            git add app/src/main/java/tw/v2scanner/MainActivity.kt
-            git commit -m "feat: add ChatGPT JSON share test"
+            git add app/src/main/java/tw/v2scanner/MainActivity.kt app/src/main/java/tw/v2scanner/ScannerCore.kt app/src/main/java/tw/v2scanner/BatchExporter.kt
+            git commit -m "feat: add atomic 6000-char JSON batches and remove temporary upload test"
             git push
           fi
 
@@ -72,7 +148,7 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - uses: android-actions/setup-android@v3
+      - uses: actions/setup-android@v3
       - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
@@ -80,5 +156,5 @@ jobs:
       - run: gradle assembleDebug --no-daemon
       - uses: actions/upload-artifact@v4
         with:
-          name: TaiwanV2Scanner-v0.6.8-debug
+          name: TaiwanV2Scanner-v0.6.9-debug
           path: app/build/outputs/apk/debug/app-debug.apk
