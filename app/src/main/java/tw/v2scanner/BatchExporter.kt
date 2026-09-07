@@ -32,24 +32,6 @@ object BatchExporter {
         val layer1Json = Layer1Scanner.buildResult(stamp, records, topN = 100)
         val layer1Root = JSONObject(layer1Json)
         val layer1Count = layer1Root.optInt("qualified_count", 0)
-        File(dir, "layer1_result.json").writeText(layer1Json, Charsets.UTF_8)
-        File(baseDir, "layer1_latest.json").writeText(layer1Json, Charsets.UTF_8)
-        File(dir, "layer1_status.json").writeText(
-            JSONObject().apply {
-                put("status", "LAYER1_COMPLETE")
-                put("scan_time", stamp)
-                put("source_records", records.size)
-                put("qualified_count", layer1Count)
-                put("completed_at", System.currentTimeMillis())
-                put("result_file", "layer1_result.json")
-            }.toString(),
-            Charsets.UTF_8
-        )
-        context.getSharedPreferences("diagnostics", 0).edit()
-            .putString("layer1_status", "LAYER1_COMPLETE")
-            .putInt("layer1_count", layer1Count)
-            .putInt("layer1_source_records", records.size)
-            .apply()
 
         val index = JSONArray()
         var current = ArrayList<JSONObject>()
@@ -106,6 +88,26 @@ object BatchExporter {
         require(writtenStocks == stocks.length()) {
             "批次輸出遺失股票：原始=${stocks.length()}，輸出=$writtenStocks"
         }
+
+        // Layer 1 is complete only after raw JSON, derived result and every batch succeed.
+        File(dir, "layer1_result.json").writeText(layer1Json, Charsets.UTF_8)
+        File(baseDir, "layer1_latest.json").writeText(layer1Json, Charsets.UTF_8)
+        File(dir, "layer1_status.json").writeText(
+            JSONObject().apply {
+                put("status", "LAYER1_COMPLETE")
+                put("scan_time", stamp)
+                put("source_records", records.size)
+                put("qualified_count", layer1Count)
+                put("completed_at", System.currentTimeMillis())
+                put("result_file", "layer1_result.json")
+            }.toString(),
+            Charsets.UTF_8
+        )
+        context.getSharedPreferences("diagnostics", 0).edit()
+            .putString("layer1_status", "LAYER1_COMPLETE")
+            .putInt("layer1_count", layer1Count)
+            .putInt("layer1_source_records", records.size)
+            .apply()
 
         val indexRoot = JSONObject().apply {
             put("scan_time", root.optString("scan_time", stamp))
