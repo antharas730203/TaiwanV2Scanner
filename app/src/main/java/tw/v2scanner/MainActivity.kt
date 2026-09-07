@@ -43,11 +43,11 @@ class MainActivity : Activity() {
         }
 
         root.addView(TextView(this).apply {
-            text = "台股 V2 掃描器 V0.7.0"
+            text = "台股 V2 掃描器 V0.8.0"
             textSize = 24f
         })
         root.addView(TextView(this).apply {
-            text = "TWSE＋TPEX｜完整掃描｜原始 JSON｜6000 字元安全分批｜GitHub"
+            text = "TWSE＋TPEX｜完整掃描｜第一層轉機／動能預篩｜原始 JSON｜6000 字元安全分批｜GitHub"
             textSize = 13f
         })
 
@@ -124,12 +124,12 @@ class MainActivity : Activity() {
         save.setOnClickListener { saveSettings(trading.isChecked) }
         scan.setOnClickListener {
             scan.isEnabled = false
-            status.text = "正在完整掃描……"
+            status.text = "正在完整掃描＋第一層……"
             Thread {
                 val report = ScanEngine.runFull(this)
                 runOnUiThread {
                     result.text = report
-                    status.text = "手動掃描完成"
+                    status.text = "手動掃描＋第一層完成"
                     scan.isEnabled = true
                     refreshStatus()
                 }
@@ -186,7 +186,9 @@ class MainActivity : Activity() {
         if (!::status.isInitialized) return
         val token = if (GitHubTokenStore.hasToken(this)) "已設定" else "未設定"
         val times = prefs.getString("schedule_times", ScanScheduler.DEFAULT_TIMES) ?: ScanScheduler.DEFAULT_TIMES
-        status.text = "排程：${if (prefs.getBoolean("auto", false)) "已啟用" else "未啟用"}\n時間：$times\nGitHub Token：$token"
+        val diag = getSharedPreferences("diagnostics", 0)
+        val l1 = diag.getString("layer1_status", "尚未執行") ?: "尚未執行"
+        status.text = "排程：${if (prefs.getBoolean("auto", false)) "已啟用" else "未啟用"}\n時間：$times\nGitHub Token：$token\n第一層：$l1"
     }
 
     private fun exportLast(type: String) {
@@ -230,7 +232,9 @@ class MainActivity : Activity() {
             append("取得：${diag.getInt("last_returned", 0)}\n")
             append("完整率：${diag.getFloat("last_rate", 0f)}\n")
             append("安全批次：${diag.getInt("last_safe_batch_count", 0)}\n")
-            append("最大批次字元：${diag.getInt("last_safe_batch_max_chars", 0)}")
+            append("最大批次字元：${diag.getInt("last_safe_batch_max_chars", 0)}\n")
+            append("第一層：${diag.getString("layer1_status", "尚未執行")}\n")
+            append("第一層候選：${diag.getInt("layer1_count", 0)}")
         }
     }
 
