@@ -34,6 +34,7 @@ class MainActivity : Activity() {
     private lateinit var auto: CheckBox
     private lateinit var scheduleModeGroup: RadioGroup
     private lateinit var autoGitHub: CheckBox
+    private lateinit var autoChatGPTShare: CheckBox
     private lateinit var scheduleTimes: EditText
     private lateinit var githubOwner: EditText
     private lateinit var githubRepo: EditText
@@ -57,7 +58,7 @@ class MainActivity : Activity() {
         }
 
         val title = TextView(this).apply {
-            text = "台股 V2 掃描器 V0.6.7"
+            text = "台股 V2 掃描器 V0.6.8"
             textSize = 24f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.rgb(30, 33, 38))
@@ -111,8 +112,14 @@ class MainActivity : Activity() {
             textSize = 15f
             isChecked = prefs.getBoolean("github_auto_upload", false)
         }
+        autoChatGPTShare = CheckBox(this).apply {
+            text = "掃描完成後自動分享 JSON 給 ChatGPT（測試）"
+            textSize = 15f
+            isChecked = prefs.getBoolean("auto_chatgpt_share", false)
+        }
         config.addView(auto)
         config.addView(autoGitHub)
+        config.addView(autoChatGPTShare)
 
         val modeLabel = sectionLabel("排程模式")
         config.addView(modeLabel)
@@ -254,6 +261,7 @@ class MainActivity : Activity() {
                 prefs.edit()
                     .putBoolean("auto", auto.isChecked)
                     .putBoolean("github_auto_upload", autoGitHub.isChecked)
+                    .putBoolean("auto_chatgpt_share", autoChatGPTShare.isChecked)
                     .putString("schedule_mode", if (tradingMode.isChecked) "trading" else "test")
                     .putString("schedule_times", normalizedTimes)
                     .putString("github_owner", githubOwner.text.toString().trim())
@@ -261,7 +269,7 @@ class MainActivity : Activity() {
                     .putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" })
                     .apply()
                 if (auto.isChecked) ScanScheduler.schedule(this, normalizedTimes) else ScanScheduler.cancel(this)
-                status.text = "設定已儲存\n模式：${if (tradingMode.isChecked) "交易時段" else "測試/不限時段"}｜排程：${if (auto.isChecked) normalizedTimes else "未啟用"}\nGitHub：${if (autoGitHub.isChecked && GitHubTokenStore.hasToken(this)) "已啟用" else "未啟用"}"
+                status.text = "設定已儲存\n模式：${if (tradingMode.isChecked) "交易時段" else "測試/不限時段"}｜排程：${if (auto.isChecked) normalizedTimes else "未啟用"}\nGitHub：${if (autoGitHub.isChecked && GitHubTokenStore.hasToken(this)) "已啟用" else "未啟用"}\nChatGPT 分享：${if (autoChatGPTShare.isChecked) "已啟用（手動掃描測試）" else "未啟用"}"
                 githubToken.setText("")
                 githubToken.hint = "GitHub Token（已設定；留白保留）"
             } catch (e: Exception) {
@@ -279,6 +287,9 @@ class MainActivity : Activity() {
                     result.text = report
                     status.text = "手動測試完成"
                     scan.isEnabled = true
+                    if (prefs.getBoolean("auto_chatgpt_share", false)) {
+                        shareLastJson()
+                    }
                 }
             }.start()
         }
@@ -339,7 +350,7 @@ class MainActivity : Activity() {
                 setRequestProperty("Authorization", "Bearer $token")
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.7")
+                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.8")
             }
             val code = conn.responseCode
             val body = try {
