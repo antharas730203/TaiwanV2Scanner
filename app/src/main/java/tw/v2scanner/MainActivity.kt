@@ -22,45 +22,100 @@ class MainActivity : Activity() {
     private lateinit var result: TextView
     private lateinit var auto: CheckBox
     private lateinit var autoGitHub: CheckBox
-    private lateinit var scheduleModeGroup: RadioGroup
     private lateinit var scheduleTimes: EditText
     private lateinit var githubOwner: EditText
     private lateinit var githubRepo: EditText
     private lateinit var githubBranch: EditText
     private lateinit var githubToken: EditText
     private val prefs by lazy { getSharedPreferences("settings", 0) }
+    private var showingSettings = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(buildUi())
+        showMain()
+    }
+
+    private fun showMain() {
+        showingSettings = false
+        setContentView(buildMainUi())
         refreshStatus()
     }
 
-    private fun buildUi(): View {
+    private fun showSettings() {
+        showingSettings = true
+        setContentView(buildSettingsUi())
+    }
+
+    private fun buildMainUi(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(12), dp(16), dp(12))
         }
-
-        root.addView(TextView(this).apply {
-            text = "台股 V2 掃描器 V0.8.0"
+        val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
+        header.addView(TextView(this).apply {
+            text = "台股 V2 掃描器 V0.8.1"
             textSize = 24f
-        })
+        }, LinearLayout.LayoutParams(0, -2, 1f))
+        header.addView(Button(this).apply {
+            text = "⚙"
+            setAllCaps(false)
+            contentDescription = "設定"
+            setOnClickListener { showSettings() }
+        }, LinearLayout.LayoutParams(dp(52), dp(52)))
+        root.addView(header)
         root.addView(TextView(this).apply {
             text = "TWSE＋TPEX｜完整掃描｜第一層轉機／動能預篩｜原始 JSON｜6000 字元安全分批｜GitHub"
             textSize = 13f
         })
-
         status = TextView(this).apply {
             textSize = 15f
             setPadding(dp(10), dp(10), dp(10), dp(10))
         }
         root.addView(status)
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        actions.addView(button("手動完整掃描").apply { setOnClickListener { runFullScan(this) } })
+        actions.addView(button("驗證 GitHub").apply { setOnClickListener { Toast.makeText(this@MainActivity, "GitHub 驗證功能沿用既有核心", Toast.LENGTH_SHORT).show() } })
+        actions.addView(button("匯出最後一次 JSON").apply { setOnClickListener { exportLast("json") } })
+        actions.addView(button("匯出最後一次 CSV").apply { setOnClickListener { exportLast("csv") } })
+        actions.addView(button("分享最後一次 JSON").apply { setOnClickListener { shareLastJson() } })
+        actions.addView(button("查看排程診斷").apply { setOnClickListener { showDiagnostics() } })
+        root.addView(actions)
+        root.addView(TextView(this).apply { text = "執行結果"; textSize = 17f })
+        result = TextView(this).apply {
+            text = "尚未執行掃描。"
+            textSize = 14f
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+        }
+        root.addView(ScrollView(this).apply { addView(result) }, LinearLayout.LayoutParams(-1, 0, 1f))
+        return root
+    }
 
+    private fun buildSettingsUi(): View {
+        val root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(16), dp(12), dp(16), dp(12))
+        }
+        root.addView(TextView(this).apply { text = "設定"; textSize = 24f })
         val scroll = ScrollView(this)
         val config = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         scroll.addView(config)
 
+        config.addView(TextView(this).apply { text = "GitHub 設定"; textSize = 18f })
+        githubOwner = edit("擁有者", prefs.getString("github_owner", "antharas730203"))
+        githubRepo = edit("Repository", prefs.getString("github_repo", "TaiwanV2Scanner"))
+        githubBranch = edit("分支", prefs.getString("github_branch", "main"))
+        githubToken = edit("Token（留白代表保留既有 Token）", null).apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+        }
+        config.addView(githubOwner)
+        config.addView(githubRepo)
+        config.addView(githubBranch)
+        config.addView(githubToken)
+        config.addView(button("驗證 GitHub").apply {
+            setOnClickListener { Toast.makeText(this@MainActivity, "GitHub 驗證功能沿用既有核心", Toast.LENGTH_SHORT).show() }
+        })
+
+        config.addView(TextView(this).apply { text = "自動排程"; textSize = 18f })
         auto = CheckBox(this).apply {
             text = "啟用自動排程"
             isChecked = prefs.getBoolean("auto", false)
@@ -72,8 +127,7 @@ class MainActivity : Activity() {
         config.addView(auto)
         config.addView(autoGitHub)
 
-        config.addView(TextView(this).apply { text = "排程模式" })
-        scheduleModeGroup = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
+        val group = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
         val trading = RadioButton(this).apply {
             text = "交易時段模式（09:00～13:30）"
             id = View.generateViewId()
@@ -84,9 +138,9 @@ class MainActivity : Activity() {
             id = View.generateViewId()
             isChecked = prefs.getString("schedule_mode", "trading") == "test"
         }
-        scheduleModeGroup.addView(trading)
-        scheduleModeGroup.addView(test)
-        config.addView(scheduleModeGroup)
+        group.addView(trading)
+        group.addView(test)
+        config.addView(group)
 
         config.addView(TextView(this).apply { text = "排程時間" })
         scheduleTimes = EditText(this).apply {
@@ -96,66 +150,25 @@ class MainActivity : Activity() {
             setSingleLine(true)
         }
         config.addView(scheduleTimes)
-
-        config.addView(TextView(this).apply {
-            text = "GitHub 設定"
-            textSize = 16f
-        })
-        githubOwner = edit("擁有者", prefs.getString("github_owner", "antharas730203"))
-        githubRepo = edit("Repository", prefs.getString("github_repo", "TaiwanV2Scanner"))
-        githubBranch = edit("分支", prefs.getString("github_branch", "main"))
-        githubToken = edit("Token（留白代表保留既有 Token）", null).apply {
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        }
-        config.addView(githubOwner)
-        config.addView(githubRepo)
-        config.addView(githubBranch)
-        config.addView(githubToken)
-
-        val save = button("儲存設定／排程")
-        val scan = button("手動完整掃描")
-        val verify = button("驗證 GitHub")
-        val exportJson = button("匯出最後一次 JSON")
-        val exportCsv = button("匯出最後一次 CSV")
-        val share = button("分享最後一次 JSON")
-        val diag = button("查看排程診斷")
-        listOf(save, scan, verify, exportJson, exportCsv, share, diag).forEach { config.addView(it) }
-
-        save.setOnClickListener { saveSettings(trading.isChecked) }
-        scan.setOnClickListener {
-            scan.isEnabled = false
-            status.text = "正在完整掃描＋第一層……"
-            Thread {
-                val report = ScanEngine.runFull(this)
-                runOnUiThread {
-                    result.text = report
-                    status.text = "手動掃描＋第一層完成"
-                    scan.isEnabled = true
-                    refreshStatus()
-                }
-            }.start()
-        }
-        verify.setOnClickListener {
-            Toast.makeText(this, "GitHub 驗證功能沿用既有核心", Toast.LENGTH_SHORT).show()
-        }
-        exportJson.setOnClickListener { exportLast("json") }
-        exportCsv.setOnClickListener { exportLast("csv") }
-        share.setOnClickListener { shareLastJson() }
-        diag.setOnClickListener { showDiagnostics() }
+        config.addView(button("儲存設定").apply { setOnClickListener { saveSettings(trading.isChecked) } })
 
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(TextView(this).apply {
-            text = "執行結果"
-            textSize = 17f
-        })
-        result = TextView(this).apply {
-            text = "尚未執行掃描。"
-            textSize = 14f
-            setPadding(dp(8), dp(8), dp(8), dp(8))
-        }
-        val resultScroll = ScrollView(this).apply { addView(result) }
-        root.addView(resultScroll, LinearLayout.LayoutParams(-1, 0, 1f))
+        root.addView(button("返回主畫面").apply { setOnClickListener { showMain() } })
         return root
+    }
+
+    private fun runFullScan(scanButton: View) {
+        scanButton.isEnabled = false
+        status.text = "正在完整掃描＋第一層……"
+        Thread {
+            val report = ScanEngine.runFull(this)
+            runOnUiThread {
+                result.text = report
+                status.text = "手動掃描＋第一層完成"
+                scanButton.isEnabled = true
+                refreshStatus()
+            }
+        }.start()
     }
 
     private fun saveSettings(tradingMode: Boolean) {
@@ -175,11 +188,14 @@ class MainActivity : Activity() {
                 .apply()
             if (auto.isChecked) ScanScheduler.schedule(this, times) else ScanScheduler.cancel(this)
             githubToken.text.clear()
-            refreshStatus()
             Toast.makeText(this, "設定已儲存", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            status.text = "設定失敗：${e.message ?: "未知錯誤"}"
+            Toast.makeText(this, "設定失敗：${e.message ?: "未知錯誤"}", Toast.LENGTH_LONG).show()
         }
+    }
+
+    override fun onBackPressed() {
+        if (showingSettings) showMain() else super.onBackPressed()
     }
 
     private fun refreshStatus() {
@@ -193,10 +209,7 @@ class MainActivity : Activity() {
 
     private fun exportLast(type: String) {
         val content = if (type == "json") ScanPersistence.lastJson(this) else ScanPersistence.lastCsv(this)
-        if (content.isNullOrEmpty()) {
-            Toast.makeText(this, "尚未有掃描資料", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (content.isNullOrEmpty()) { Toast.makeText(this, "尚未有掃描資料", Toast.LENGTH_SHORT).show(); return }
         val dir = File(getExternalFilesDir(null), "exports")
         dir.mkdirs()
         val file = File(dir, "TaiwanV2Scanner_${System.currentTimeMillis()}.$type")
@@ -206,10 +219,7 @@ class MainActivity : Activity() {
 
     private fun shareLastJson() {
         val content = ScanPersistence.lastJson(this)
-        if (content.isNullOrEmpty()) {
-            Toast.makeText(this, "尚未有 JSON", Toast.LENGTH_SHORT).show()
-            return
-        }
+        if (content.isNullOrEmpty()) { Toast.makeText(this, "尚未有 JSON", Toast.LENGTH_SHORT).show(); return }
         val dir = File(getExternalFilesDir(null), "share")
         dir.mkdirs()
         val file = File(dir, "TaiwanV2Scanner_latest.json")
