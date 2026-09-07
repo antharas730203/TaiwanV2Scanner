@@ -34,14 +34,12 @@ class MainActivity : Activity() {
     private lateinit var auto: CheckBox
     private lateinit var scheduleModeGroup: RadioGroup
     private lateinit var autoGitHub: CheckBox
-    private lateinit var autoChatGPTShare: CheckBox
     private lateinit var scheduleTimes: EditText
     private lateinit var githubOwner: EditText
     private lateinit var githubRepo: EditText
     private lateinit var githubBranch: EditText
     private lateinit var githubToken: EditText
     private lateinit var scan: Button
-    private lateinit var testGitHub: Button
     private lateinit var verifyGitHub: Button
     private lateinit var githubAdvanced: View
     private val prefs by lazy { getSharedPreferences("settings", 0) }
@@ -58,7 +56,7 @@ class MainActivity : Activity() {
         }
 
         val title = TextView(this).apply {
-            text = "台股 V2 掃描器 V0.6.8"
+            text = "台股 V2 掃描器 V0.6.9"
             textSize = 24f
             setTypeface(null, Typeface.BOLD)
             setTextColor(Color.rgb(30, 33, 38))
@@ -112,14 +110,8 @@ class MainActivity : Activity() {
             textSize = 15f
             isChecked = prefs.getBoolean("github_auto_upload", false)
         }
-        autoChatGPTShare = CheckBox(this).apply {
-            text = "掃描完成後自動分享 JSON 給 ChatGPT（測試）"
-            textSize = 15f
-            isChecked = prefs.getBoolean("auto_chatgpt_share", false)
-        }
         config.addView(auto)
         config.addView(autoGitHub)
-        config.addView(autoChatGPTShare)
 
         val modeLabel = sectionLabel("排程模式")
         config.addView(modeLabel)
@@ -200,12 +192,8 @@ class MainActivity : Activity() {
         row1.addView(save, buttonWeightParams())
         row1.addView(scan, buttonWeightParams().apply { leftMargin = dp(6) })
         actionGrid.addView(row1)
-
         val row2 = buttonRow()
-        testGitHub = actionButton("測試 GitHub 上傳 JSON")
-        verifyGitHub = actionButton("驗證 GitHub Token")
-        row2.addView(testGitHub, buttonWeightParams())
-        row2.addView(verifyGitHub, buttonWeightParams().apply { leftMargin = dp(6) })
+        row2.addView(verifyGitHub, buttonWeightParams())
         actionGrid.addView(row2)
 
         val row3 = buttonRow()
@@ -261,7 +249,6 @@ class MainActivity : Activity() {
                 prefs.edit()
                     .putBoolean("auto", auto.isChecked)
                     .putBoolean("github_auto_upload", autoGitHub.isChecked)
-                    .putBoolean("auto_chatgpt_share", autoChatGPTShare.isChecked)
                     .putString("schedule_mode", if (tradingMode.isChecked) "trading" else "test")
                     .putString("schedule_times", normalizedTimes)
                     .putString("github_owner", githubOwner.text.toString().trim())
@@ -287,29 +274,6 @@ class MainActivity : Activity() {
                     result.text = report
                     status.text = "手動測試完成"
                     scan.isEnabled = true
-                    if (prefs.getBoolean("auto_chatgpt_share", false)) {
-                        shareLastJson()
-                    }
-                }
-            }.start()
-        }
-
-        testGitHub.setOnClickListener {
-            val json = ScanPersistence.lastJson(this)
-            if (json == null) {
-                Toast.makeText(this, "請先完成一次掃描。", Toast.LENGTH_LONG).show()
-                return@setOnClickListener
-            }
-            testGitHub.isEnabled = false
-            status.text = "GitHub 測試上傳中……"
-            result.text = "正在將最後一次 JSON 上傳至 GitHub……"
-            Thread {
-                val stamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
-                val report = GitHubUploader.uploadScan(this, json, stamp, "test")
-                runOnUiThread {
-                    status.text = report
-                    result.text = report
-                    testGitHub.isEnabled = true
                 }
             }.start()
         }
@@ -350,7 +314,7 @@ class MainActivity : Activity() {
                 setRequestProperty("Authorization", "Bearer $token")
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.8")
+                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.6.9")
             }
             val code = conn.responseCode
             val body = try {
