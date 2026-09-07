@@ -20,6 +20,7 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           import re
+          import base64
 
           p = Path("app/src/main/java/tw/v2scanner/MainActivity.kt")
           s = p.read_text(encoding="utf-8")
@@ -35,6 +36,10 @@ jobs:
           s = s.replace('TaiwanV2Scanner/0.6.8', 'TaiwanV2Scanner/0.6.9')
           p.write_text(s, encoding="utf-8")
 
+          batch_b64 = "cGFja2FnZSB0dy52MnNjYW5uZXIKCmltcG9ydCBhbmRyb2lkLmNvbnRlbnQuQ29udGV4dAppbXBvcnQgb3JnLmpzb24uSlNPTkFycmF5CmltcG9ydCBvcmcuanNvbi5KU09OT2JqZWN0CmltcG9ydCBqYXZhLmlvLkZpbGUKCm9iamVjdCBCYXRjaEV4cG9ydGVyIHsKICAgIGNvbnN0IHZhbCBDSEFSX0xJTUlUID0gNjAwMAoKICAgIGRhdGEgY2xhc3MgRXhwb3J0UmVzdWx0KHZhbCBjb3VudDogSW50LCB2YWwgZGlyZWN0b3J5OiBGaWxlLCB2YWwgbWF4Q2hhcnM6IEludCkKCiAgICBmdW4gZXhwb3J0KGNvbnRleHQ6IENvbnRleHQsIHN0YW1wOiBTdHJpbmcsIGZ1bGxKc29uOiBTdHJpbmcpOiBFeHBvcnRSZXN1bHQgewogICAgICAgIHZhbCByb290ID0gSlNPTk9iamVjdChmdWxsSnNvbikKICAgICAgICB2YWwgc3RvY2tzID0gcm9vdC5vcHRKU09OQXJyYXkoInN0b2NrcyIpID86IEpTT05BcnJheSgpCiAgICAgICAgdmFsIGRpciA9IEZpbGUoY29udGV4dC5nZXRFeHRlcm5hbEZpbGVzRGlyKG51bGwpLCAic2Nhbm5lcl9iYXRjaGVzLyRzdGFtcCIpCiAgICAgICAgaWYgKGRpci5leGlzdHMoKSkgZGlyLmRlbGV0ZVJlY3Vyc2l2ZWx5KCkKICAgICAgICBkaXIubWtkaXJzKCkKCiAgICAgICAgdmFsIGluZGV4ID0gSlNPTkFycmF5KCkKICAgICAgICB2YXIgY3VycmVudCA9IEpTT05BcnJheSgpCiAgICAgICAgdmFyIGJhdGNoTm8gPSAxCiAgICAgICAgdmFyIG1heENoYXJzID0gMAoKICAgICAgICBmdW4gYnVpbGRUZXh0KGJhdGNoOiBKU09OQXJyYXksIG51bWJlcjogSW50KTogU3RyaW5nIHsKICAgICAgICAgICAgdmFsIGZpcnN0ID0gYmF0Y2gub3B0SlNPTk9iamVjdCgwKT8ub3B0U3RyaW5nKCJjIikub3JFbXB0eSgpCiAgICAgICAgICAgIHZhbCBsYXN0ID0gYmF0Y2gub3B0SlNPTk9iamVjdChiYXRjaC5sZW5ndGgoKSAtIDEpPy5vcHRTdHJpbmcoImMiKS5vckVtcHR5KCkKICAgICAgICAgICAgcmV0dXJuIEpTT05PYmplY3QoKS5hcHBseSB7CiAgICAgICAgICAgICAgICBwdXQoInNjYW5fdGltZSIsIHJvb3Qub3B0U3RyaW5nKCJzY2FuX3RpbWUiLCBzdGFtcCkpCiAgICAgICAgICAgICAgICBwdXQoIm1vZGUiLCByb290Lm9wdFN0cmluZygibW9kZSIsICJGVUxMIikpCiAgICAgICAgICAgICAgICBwdXQoImJhdGNoIiwgbnVtYmVyKQogICAgICAgICAgICAgICAgcHV0KCJzdG9ja19zdGFydCIsIGZpcnN0KQogICAgICAgICAgICAgICAgcHV0KCJzdG9ja19lbmQiLCBsYXN0KQogICAgICAgICAgICAgICAgcHV0KCJzdG9ja19jb3VudCIsIGJhdGNoLmxlbmd0aCgpKQogICAgICAgICAgICAgICAgcHV0KCJjaGFyX2xpbWl0IiwgQ0hBUl9MSU1JVCkKICAgICAgICAgICAgICAgIHB1dCgic3RvY2tzIiwgYmF0Y2gpCiAgICAgICAgICAgIH0udG9TdHJpbmcoKQogICAgICAgIH0KCiAgICAgICAgZnVuIGZsdXNoKCkgewogICAgICAgICAgICBpZiAoY3VycmVudC5sZW5ndGgoKSA9PSAwKSByZXR1cm4KICAgICAgICAgICAgdmFsIHRleHQgPSBidWlsZFRleHQoY3VycmVudCwgYmF0Y2hObykKICAgICAgICAgICAgcmVxdWlyZSh0ZXh0Lmxlbmd0aCA8PSBDSEFSX0xJTUlUKSB7ICJCYXRjaCAkYmF0Y2hObyDotoXpgY4gJHtDSEFSX0xJTUlUfSDlrZflhYPvvJoke3RleHQubGVuZ3RofSIgfQogICAgICAgICAgICBGaWxlKGRpciwgImJhdGNoXyUwM2QuanNvbiIuZm9ybWF0KGJhdGNoTm8pKS53cml0ZVRleHQodGV4dCwgQ2hhcnNldHMuVVRGXzgpCiAgICAgICAgICAgIGluZGV4LnB1dChKU09OT2JqZWN0KCkuYXBwbHkgewogICAgICAgICAgICAgICAgcHV0KCJiYXRjaCIsIGJhdGNoTm8pCiAgICAgICAgICAgICAgICBwdXQoInN0b2NrX3N0YXJ0IiwgY3VycmVudC5vcHRKU09OT2JqZWN0KDApPy5vcHRTdHJpbmcoImMiKS5vckVtcHR5KCkpCiAgICAgICAgICAgICAgICBwdXQoInN0b2NrX2VuZCIsIGN1cnJlbnQub3B0SlNPTk9iamVjdChjdXJyZW50Lmxlbmd0aCgpIC0gMSk/Lm9wdFN0cmluZygiYyIpLm9yRW1wdHkoKSkKICAgICAgICAgICAgICAgIHB1dCgic3RvY2tfY291bnQiLCBjdXJyZW50Lmxlbmd0aCgpKQogICAgICAgICAgICAgICAgcHV0KCJjaGFyYWN0ZXJzIiwgdGV4dC5sZW5ndGgpCiAgICAgICAgICAgICAgICBwdXQoImZpbGUiLCAiYmF0Y2hfJTAzZC5qc29uIi5mb3JtYXQoYmF0Y2hObykpCiAgICAgICAgICAgIH0pCiAgICAgICAgICAgIG1heENoYXJzID0gbWF4T2YobWF4Q2hhcnMsIHRleHQubGVuZ3RoKQogICAgICAgICAgICBjdXJyZW50ID0gSlNPTkFycmF5KCkKICAgICAgICAgICAgYmF0Y2hObysrCiAgICAgICAgfQoKICAgICAgICBmb3IgKGkgaW4gMCB1bnRpbCBzdG9ja3MubGVuZ3RoKCkpIHsKICAgICAgICAgICAgdmFsIHN0b2NrID0gc3RvY2tzLm9wdEpTT05PYmplY3QoaSkgPzogY29udGludWUKICAgICAgICAgICAgdmFsIGNhbmRpZGF0ZSA9IEpTT05BcnJheSgpCiAgICAgICAgICAgIGZvciAoaiBpbiAwIHVudGlsIGN1cnJlbnQubGVuZ3RoKCkpIGNhbmRpZGF0ZS5wdXQoY3VycmVudC5nZXRKU09OT2JqZWN0KGopKQogICAgICAgICAgICBjYW5kaWRhdGUucHV0KHN0b2NrKQogICAgICAgICAgICBpZiAoY3VycmVudC5sZW5ndGgoKSA+IDAgJiYgYnVpbGRUZXh0KGNhbmRpZGF0ZSwgYmF0Y2hObykubGVuZ3RoID4gQ0hBUl9MSU1JVCkgZmx1c2goKQogICAgICAgICAgICBjdXJyZW50LnB1dChzdG9jaykKICAgICAgICB9CiAgICAgICAgZmx1c2goKQoKICAgICAgICB2YWwgaW5kZXhSb290ID0gSlNPTk9iamVjdCgpLmFwcGx5IHsKICAgICAgICAgICAgcHV0KCJzY2FuX3RpbWUiLCByb290Lm9wdFN0cmluZygic2Nhbl90aW1lIiwgc3RhbXApKQogICAgICAgICAgICBwdXQoIm1vZGUiLCByb290Lm9wdFN0cmluZygibW9kZSIsICJGVUxMIikpCiAgICAgICAgICAgIHB1dCgiY2hhcl9saW1pdCIsIENIQVJfTElNSVQpCiAgICAgICAgICAgIHB1dCgic3RvY2tfY291bnQiLCBzdG9ja3MubGVuZ3RoKCkpCiAgICAgICAgICAgIHB1dCgibmF0Y2hfY291bnQiLCBpbmRleC5sZW5ndGgoKSkKICAgICAgICAgICAgcHV0KCJtYXhfYmF0Y2hfY2hhcmFjdGVycyIsIG1heENoYXJzKQogICAgICAgICAgICBwdXQoImJhdGNoZXMiLCBpbmRleCkKICAgICAgICB9CiAgICAgICAgRmlsZShkaXIsICJiYXRjaF9pbmRleC5qc29uIikud3JpdGVUZXh0KGluZGV4Um9vdC50b1N0cmluZygpLCBDaGFyc2V0cy5VVEZfOCkKICAgICAgICByZXR1cm4gRXhwb3J0UmVzdWx0KGluZGV4Lmxlbmd0aCgpLCBkaXIsIG1heENoYXJzKQogICAgfQp9Cg=="
+          batch = Path("app/src/main/java/tw/v2scanner/BatchExporter.kt")
+          batch.write_bytes(base64.b64decode(batch_b64))
+
           scanner = Path("app/src/main/java/tw/v2scanner/ScannerCore.kt")
           s = scanner.read_text(encoding="utf-8")
           needle = '            ScanPersistence.saveResult(context, json, csv, stamp)\n'
@@ -43,92 +48,8 @@ jobs:
                   raise SystemExit('ScanPersistence hook not found')
               s = s.replace(needle, needle + '            val batches = BatchExporter.export(context, stamp, json)\n', 1)
           s = s.replace('                .putInt("last_final_batch", result.finalBatchSize)\n', '                .putInt("last_final_batch", result.finalBatchSize)\n                .putInt("last_safe_batch_count", batches.count)\n                .putInt("last_safe_batch_max_chars", batches.maxChars)\n')
-          s = s.replace('            "完整市場掃描\\n上市：${result.markets.first { it.market == "TWSE" }.codes.size} 檔｜上櫃：${result.markets.first { it.market == "TPEX" }.codes.size} 檔\\n全市場：${result.expected} 檔\\n', '            "完整市場掃描\\n上市：${result.markets.first { it.market == "TWSE" }.codes.size} 檔｜上櫃：${result.markets.first { it.market == "TPEX" }.codes.size} 檔\\n全市場：${result.expected} 檔\\n安全批次：${batches.count} 批｜每批 ≤ ${BatchExporter.CHAR_LIMIT} 字元\\n')
           scanner.write_text(s, encoding="utf-8")
           PY
-
-          cat > app/src/main/java/tw/v2scanner/BatchExporter.kt <<'KOT'
-package tw.v2scanner
-
-import android.content.Context
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.File
-
-object BatchExporter {
-    const val CHAR_LIMIT = 6000
-
-    data class ExportResult(val count: Int, val directory: File, val maxChars: Int)
-
-    fun export(context: Context, stamp: String, fullJson: String): ExportResult {
-        val root = JSONObject(fullJson)
-        val stocks = root.optJSONArray("stocks") ?: JSONArray()
-        val dir = File(context.getExternalFilesDir(null), "scanner_batches/$stamp")
-        if (dir.exists()) dir.deleteRecursively()
-        dir.mkdirs()
-
-        val index = JSONArray()
-        var current = JSONArray()
-        var batchNo = 1
-        var maxChars = 0
-
-        fun buildText(batch: JSONArray, number: Int): String {
-            val first = batch.optJSONObject(0)?.optString("c").orEmpty()
-            val last = batch.optJSONObject(batch.length() - 1)?.optString("c").orEmpty()
-            return JSONObject().apply {
-                put("scan_time", root.optString("scan_time", stamp))
-                put("mode", root.optString("mode", "FULL"))
-                put("batch", number)
-                put("stock_start", first)
-                put("stock_end", last)
-                put("stock_count", batch.length())
-                put("char_limit", CHAR_LIMIT)
-                put("stocks", batch)
-            }.toString()
-        }
-
-        fun flush() {
-            if (current.length() == 0) return
-            val text = buildText(current, batchNo)
-            require(text.length <= CHAR_LIMIT) { "Batch $batchNo 超過 ${CHAR_LIMIT} 字元：${text.length}" }
-            File(dir, "batch_%03d.json".format(batchNo)).writeText(text, Charsets.UTF_8)
-            index.put(JSONObject().apply {
-                put("batch", batchNo)
-                put("stock_start", current.optJSONObject(0)?.optString("c").orEmpty())
-                put("stock_end", current.optJSONObject(current.length() - 1)?.optString("c").orEmpty())
-                put("stock_count", current.length())
-                put("characters", text.length)
-                put("file", "batch_%03d.json".format(batchNo))
-            })
-            maxChars = maxOf(maxChars, text.length)
-            current = JSONArray()
-            batchNo++
-        }
-
-        for (i in 0 until stocks.length()) {
-            val stock = stocks.optJSONObject(i) ?: continue
-            val candidate = JSONArray()
-            for (j in 0 until current.length()) candidate.put(current.getJSONObject(j))
-            candidate.put(stock)
-            if (current.length() > 0 && buildText(candidate, batchNo).length > CHAR_LIMIT) flush()
-            current.put(stock)
-        }
-        flush()
-
-        val indexRoot = JSONObject().apply {
-            put("scan_time", root.optString("scan_time", stamp))
-            put("mode", root.optString("mode", "FULL"))
-            put("char_limit", CHAR_LIMIT)
-            put("stock_count", stocks.length())
-            put("batch_count", index.length())
-            put("max_batch_characters", maxChars)
-            put("batches", index)
-        }
-        File(dir, "batch_index.json").writeText(indexRoot.toString(), Charsets.UTF_8)
-        return ExportResult(index.length(), dir, maxChars)
-    }
-}
-KOT
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
