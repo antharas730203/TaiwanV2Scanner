@@ -23,6 +23,27 @@ object BatchExporter {
         if (dir.exists()) dir.deleteRecursively()
         check(dir.mkdirs()) { "無法建立批次資料夾：${dir.absolutePath}" }
 
+        // Layer 1 is a derived result. The original fullJson is never modified.
+        val records = ArrayList<StockRecord>(stocks.length())
+        for (i in 0 until stocks.length()) {
+            val stock = stocks.optJSONObject(i) ?: continue
+            val market = stock.optString("market").ifBlank { "TWSE" }
+            records += StockRecord(market, stock)
+        }
+        val layer1Json = Layer1Scanner.buildResult(stamp, records, topN = 100)
+        File(dir, "layer1_result.json").writeText(layer1Json, Charsets.UTF_8)
+        File(baseDir, "layer1_latest.json").writeText(layer1Json, Charsets.UTF_8)
+        File(dir, "layer1_status.json").writeText(
+            JSONObject().apply {
+                put("status", "LAYER1_COMPLETE")
+                put("scan_time", stamp)
+                put("source_records", records.size)
+                put("completed_at", System.currentTimeMillis())
+                put("result_file", "layer1_result.json")
+            }.toString(),
+            Charsets.UTF_8
+        )
+
         val index = JSONArray()
         var current = ArrayList<JSONObject>()
         var batchNo = 1
@@ -86,6 +107,8 @@ object BatchExporter {
             put("stock_count", stocks.length())
             put("batch_count", index.length())
             put("max_batch_characters", maxChars)
+            put("layer1_file", "layer1_result.json")
+            put("layer1_status", "LAYER1_COMPLETE")
             put("batches", index)
         }
         File(dir, "batch_index.json").writeText(indexRoot.toString(), Charsets.UTF_8)
