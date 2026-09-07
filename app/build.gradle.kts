@@ -6,23 +6,24 @@ plugins {
 }
 
 android {
-    signingConfigs {
-        create("release") {
-            val keystorePropertiesFile = rootProject.file("keystore.properties")
-            val keystoreProperties = Properties()
+    val keystorePropertiesFile = rootProject.file("keystore.properties")
+    val keystoreProperties = Properties()
 
-            if (keystorePropertiesFile.exists()) {
-                keystorePropertiesFile.inputStream().use {
-                    keystoreProperties.load(it)
-                }
+    if (keystorePropertiesFile.exists()) {
+        keystorePropertiesFile.inputStream().use {
+            keystoreProperties.load(it)
+        }
+
+        signingConfigs {
+            create("release") {
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
             }
-
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
         }
     }
+
     namespace = "tw.v2scanner"
     compileSdk = 35
     defaultConfig {
