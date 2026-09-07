@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Apply v0.6.9 cleanup and 6000-char batch logic
+      - name: Apply v0.6.9 cleanup and batch logic
         shell: bash
         run: |
           set -e
@@ -21,7 +21,6 @@ jobs:
           from pathlib import Path
           import re
 
-          # Remove the temporary ChatGPT auto-share test and the manual GitHub test-upload UI.
           p = Path("app/src/main/java/tw/v2scanner/MainActivity.kt")
           s = p.read_text(encoding="utf-8")
           s = s.replace('    private lateinit var autoChatGPTShare: CheckBox\n', '')
@@ -36,9 +35,20 @@ jobs:
           s = s.replace('TaiwanV2Scanner/0.6.8', 'TaiwanV2Scanner/0.6.9')
           p.write_text(s, encoding="utf-8")
 
-          # Create the new atomic JSON batch exporter.
-          batch = Path("app/src/main/java/tw/v2scanner/BatchExporter.kt")
-          batch.write_text(r'''package tw.v2scanner
+          scanner = Path("app/src/main/java/tw/v2scanner/ScannerCore.kt")
+          s = scanner.read_text(encoding="utf-8")
+          needle = '            ScanPersistence.saveResult(context, json, csv, stamp)\n'
+          if 'BatchExporter.export(context, stamp, json)' not in s:
+              if needle not in s:
+                  raise SystemExit('ScanPersistence hook not found')
+              s = s.replace(needle, needle + '            val batches = BatchExporter.export(context, stamp, json)\n', 1)
+          s = s.replace('                .putInt("last_final_batch", result.finalBatchSize)\n', '                .putInt("last_final_batch", result.finalBatchSize)\n                .putInt("last_safe_batch_count", batches.count)\n                .putInt("last_safe_batch_max_chars", batches.maxChars)\n')
+          s = s.replace('            "完整市場掃描\\n上市：${result.markets.first { it.market == "TWSE" }.codes.size} 檔｜上櫃：${result.markets.first { it.market == "TPEX" }.codes.size} 檔\\n全市場：${result.expected} 檔\\n', '            "完整市場掃描\\n上市：${result.markets.first { it.market == "TWSE" }.codes.size} 檔｜上櫃：${result.markets.first { it.market == "TPEX" }.codes.size} 檔\\n全市場：${result.expected} 檔\\n安全批次：${batches.count} 批｜每批 ≤ ${BatchExporter.CHAR_LIMIT} 字元\\n')
+          scanner.write_text(s, encoding="utf-8")
+          PY
+
+          cat > app/src/main/java/tw/v2scanner/BatchExporter.kt <<'KOT'
+package tw.v2scanner
 
 import android.content.Context
 import org.json.JSONArray
@@ -100,9 +110,7 @@ object BatchExporter {
             val candidate = JSONArray()
             for (j in 0 until current.length()) candidate.put(current.getJSONObject(j))
             candidate.put(stock)
-            if (current.length() > 0 && buildText(candidate, batchNo).length > CHAR_LIMIT) {
-                flush()
-            }
+            if (current.length() > 0 && buildText(candidate, batchNo).length > CHAR_LIMIT) flush()
             current.put(stock)
         }
         flush()
@@ -120,27 +128,13 @@ object BatchExporter {
         return ExportResult(index.length(), dir, maxChars)
     }
 }
-''', encoding="utf-8")
-
-          # Hook batch generation into every full scan without changing the original full JSON.
-          p = Path("app/src/main/java/tw/v2scanner/ScannerCore.kt")
-          s = p.read_text(encoding="utf-8")
-          needle = '            ScanPersistence.saveResult(context, json, csv, stamp)\n'
-          replacement = needle + '            val batches = BatchExporter.export(context, stamp, json)\n'
-          if 'BatchExporter.export(context, stamp, json)' not in s:
-              if needle not in s:
-                  raise SystemExit('Cannot find ScanPersistence.saveResult hook')
-              s = s.replace(needle, replacement, 1)
-          s = s.replace('                .putInt("last_final_batch", result.finalBatchSize)\n', '                .putInt("last_final_batch", result.finalBatchSize)\n                .putInt("last_safe_batch_count", batches.count)\n                .putInt("last_safe_batch_max_chars", batches.maxChars)\n')
-          s = s.replace('            "完整市場掃描\\n上市：${result.markets.first { it.market == "TWSE" }.codes.size} 檔｜上櫃：${result.markets.first { it.market == "TPEX" }.codes.size} 檔\\n全市場：${result.expected} 檔\\n', '            "完整市場掃描\\n上市：${result.markets.first { it.market == "TWSE" }.codes.size} 檔｜上櫃：${result.markets.first { it.market == "TPEX" }.codes.size} 檔\\n全市場：${result.expected} 檔\\n安全批次：${batches.count} 批｜每批 ≤ ${BatchExporter.CHAR_LIMIT} 字元\\n')
-          p.write_text(s, encoding="utf-8")
-          PY
+KOT
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           if ! git diff --quiet; then
             git add app/src/main/java/tw/v2scanner/MainActivity.kt app/src/main/java/tw/v2scanner/ScannerCore.kt app/src/main/java/tw/v2scanner/BatchExporter.kt
-            git commit -m "feat: add atomic 6000-char JSON batches and remove temporary upload test"
+            git commit -m "feat: add atomic 6000-char JSON batches and remove temporary ChatGPT test"
             git push
           fi
 
