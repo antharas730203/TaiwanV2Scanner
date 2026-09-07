@@ -8,67 +8,76 @@ import java.io.File
 object BatchExporter {
     const val CHAR_LIMIT = 6000
 
-    data class ExportResult(val count: Int, val directory: File, val maxChars: Int)
+    data class ExportResult(
+        val count: Int,
+        val directory: File,
+        val maxChars: Int,
+        val stockCount: Int
+    )
 
     fun export(context: Context, stamp: String, fullJson: String): ExportResult {
         val root = JSONObject(fullJson)
         val stocks = root.optJSONArray("stocks") ?: JSONArray()
-        val dir = File(context.getExternalFilesDir(null), "scanner_batches/$stamp")
+        val baseDir = context.getExternalFilesDir(null) ?: context.filesDir
+        val dir = File(baseDir, "scanner_batches/$stamp")
         if (dir.exists()) dir.deleteRecursively()
-        dir.mkdirs()
+        check(dir.mkdirs()) { "無法建立批次資料夾：${dir.absolutePath}" }
 
         val index = JSONArray()
-        var current = JSONArray()
+        var current = ArrayList<JSONObject>()
         var batchNo = 1
         var maxChars = 0
+        var writtenStocks = 0
 
-        fun buildText(batch: JSONArray, number: Int): String {
-            val first = batch.optJSONObject(0)?.optString("c").orEmpty()
-            val last = batch.optJSONObject(batch.length() - 1)?.optString("c").orEmpty()
-            return JSONObject().apply {
-                put("scan_time", root.optString("scan_time", stamp))
-                put("mode", root.optString("mode", "FULL"))
-                put("batch", number)
-                put("stock_start", first)
-                put("stock_end", last)
-                put("stock_count", batch.length())
-                put("char_limit", CHAR_LIMIT)
-                put("stocks", batch)
-            }.toString()
+        fun buildText(items: List<JSONObject>, number: Int): String {
+            val result = JSONObject()
+            result.put("scan_time", root.optString("scan_time", stamp))
+            result.put("mode", root.optString("mode", "FULL"))
+            result.put("batch", number)
+            result.put("char_limit", CHAR_LIMIT)
+            result.put("stock_count", items.size)
+            result.put("stock_start", items.firstOrNull()?.optString("c").orEmpty())
+            result.put("stock_end", items.lastOrNull()?.optString("c").orEmpty())
+            result.put("stocks", JSONArray().apply { items.forEach { put(it) } })
+            return result.toString()
         }
 
-        fun flush() {
-            if (current.length() == 0) return
-            val text = buildText(current, batchNo)
-            require(text.length <= CHAR_LIMIT) { "Batch $batchNo exceeds $CHAR_LIMIT characters" }
+        fun writeBatch(items: List<JSONObject>) {
+            if (items.isEmpty()) return
+            val text = buildText(items, batchNo)
+            require(text.length <= CHAR_LIMIT) {
+                "單一批次無法控制在 $CHAR_LIMIT 字元內：batch=$batchNo stock=${items.firstOrNull()?.optString("c")} chars=${text.length}"
+            }
             val fileName = "batch_%03d.json".format(batchNo)
             File(dir, fileName).writeText(text, Charsets.UTF_8)
             index.put(JSONObject().apply {
                 put("batch", batchNo)
-                put("stock_start", current.optJSONObject(0)?.optString("c").orEmpty())
-                put("stock_end", current.optJSONObject(current.length() - 1)?.optString("c").orEmpty())
-                put("stock_count", current.length())
-                put("characters", text.length)
                 put("file", fileName)
+                put("stock_start", items.firstOrNull()?.optString("c").orEmpty())
+                put("stock_end", items.lastOrNull()?.optString("c").orEmpty())
+                put("stock_count", items.size)
+                put("characters", text.length)
             })
             maxChars = maxOf(maxChars, text.length)
-            current = JSONArray()
+            writtenStocks += items.size
             batchNo++
         }
 
         for (i in 0 until stocks.length()) {
             val stock = stocks.optJSONObject(i) ?: continue
-            val candidate = JSONArray()
-            for (j in 0 until current.length()) {
-                candidate.put(current.optJSONObject(j))
+            val candidate = ArrayList(current)
+            candidate.add(stock)
+            if (current.isNotEmpty() && buildText(candidate, batchNo).length > CHAR_LIMIT) {
+                writeBatch(current)
+                current = ArrayList()
             }
-            candidate.put(stock)
-            if (current.length() > 0 && buildText(candidate, batchNo).length > CHAR_LIMIT) {
-                flush()
-            }
-            current.put(stock)
+            current.add(stock)
         }
-        flush()
+        writeBatch(current)
+
+        require(writtenStocks == stocks.length()) {
+            "批次輸出遺失股票：原始=${stocks.length()}，輸出=$writtenStocks"
+        }
 
         val indexRoot = JSONObject().apply {
             put("scan_time", root.optString("scan_time", stamp))
@@ -80,6 +89,6 @@ object BatchExporter {
             put("batches", index)
         }
         File(dir, "batch_index.json").writeText(indexRoot.toString(), Charsets.UTF_8)
-        return ExportResult(index.length(), dir, maxChars)
+        return ExportResult(index.length(), dir, maxChars, writtenStocks)
     }
 }
