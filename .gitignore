@@ -1,0 +1,7 @@
+keystore.properties
+local.properties
+.gradle/
+.idea/
+**/build/
+app/release/
+scanner_data/

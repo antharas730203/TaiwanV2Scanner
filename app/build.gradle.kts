@@ -1,17 +1,36 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
 }
 
 android {
+    signingConfigs {
+        create("release") {
+            val keystorePropertiesFile = rootProject.file("keystore.properties")
+            val keystoreProperties = Properties()
+
+            if (keystorePropertiesFile.exists()) {
+                keystorePropertiesFile.inputStream().use {
+                    keystoreProperties.load(it)
+                }
+            }
+
+            storeFile = file(keystoreProperties["storeFile"] as String)
+            storePassword = keystoreProperties["storePassword"] as String
+            keyAlias = keystoreProperties["keyAlias"] as String
+            keyPassword = keystoreProperties["keyPassword"] as String
+        }
+    }
     namespace = "tw.v2scanner"
     compileSdk = 35
     defaultConfig {
         applicationId = "tw.v2scanner"
         minSdk = 26
         targetSdk = 35
-        versionCode = 15
-        versionName = "0.8.0"
+        versionCode = 16
+        versionName = "0.8.1"
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
