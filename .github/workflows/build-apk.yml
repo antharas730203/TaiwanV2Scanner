@@ -19,7 +19,7 @@ jobs:
           set -e
           python3 - <<'PY'
           from pathlib import Path
-          import re, base64
+          import re
 
           p = Path("app/src/main/java/tw/v2scanner/MainActivity.kt")
           s = p.read_text(encoding="utf-8")
@@ -34,44 +34,29 @@ jobs:
           s = s.replace('台股 V2 掃描器 V0.6.8', '台股 V2 掃描器 V0.6.9')
           s = s.replace('TaiwanV2Scanner/0.6.8', 'TaiwanV2Scanner/0.6.9')
           p.write_text(s, encoding="utf-8")
-
-          batch_b64 = "cGFja2FnZSB0dy52MnNjYW5uZXIKCmltcG9ydCBhbmRyb2lkLmNvbnRlbnQuQ29udGV4dAppbXBvcnQgb3JnLmpzb24uSlNPTkFycmF5CmltcG9ydCBvcmcuanNvbi5KU09OT2JqZWN0CmltcG9ydCBqYXZhLmlvLkZpbGUKaW1wb3J0IGphdmEubmlvLmZpbGUuRmlsZQogCmltcG9ydCBqYXZhLm5pby5maWxlLkZpbGVzCmltcG9ydCBqYXZhLnV0aWwuQXJyYXlMaXN0CgpvYmplY3QgQmF0Y2hFeHBvcnRlciB7CiAgICBjb25zdCB2YWwgQ0hBUl9MSU1JVCA9IDYwMDAKCiAgICBkYXRhIGNsYXNzIEV4cG9ydFJlc3VsdCh2YWwgY291bnQ6IEludCwgdGhlIGRpcmVjdG9yeTogRmlsZSwgdmFsIG1heENoYXJzOiBJbnQpCgogICAgZnVuIGV4cG9ydChjb250ZXh0OiBDb250ZXh0LCBzdGFtcDogU3RyaW5nLCBmdWxsSnNvbjogU3RyaW5nKTogRXhwb3J0UmVzdWx0IHsKICAgICAgICB2YWwgcm9vdCA9IEpTT05PYmplY3QoZnVsbEpzb24pCiAgICAgICAgdmFsIHN0b2NrcyA9IHJvb3Qub3B0SlNPTkFycmF5KCJzdG9ja3MiKSA/OiBKU09OQXJyYXkoKQogICAgICAgIHZhbCBkaXIgPSBGaWxlKGNvbnRleHQuZ2V0RXh0ZXJuYWxGaWxlc0RpcihudWxsKSwgInNjYW5uZXJfYmF0Y2hlcy8kc3RhbXAiKQogICAgICAgIGlmIChkaXIuZXhpc3RzKCkpIGRpci5kZWxldGVSZWN1cnNpdmVseSgpCiAgICAgICAgZGlyLm1rZGlycygpCgogICAgICAgIHZhbCBpbmRleCA9IEpTT05BcnJheSgpCiAgICAgICAgdmFyIGN1cnJlbnQgPSBKU09OQXJyYXkoKQogICAgICAgIHZhciBiYXRjaE5vID0gMQogICAgICAgIHZhciBtYXhDaGFycyA9IDAKCiAgICAgICAgZnVuIGJ1aWxkVGV4dChiYXRjaDogSlNPTkFycmF5LCBudW1iZXI6IEludCk6IFN0cmluZyB7CiAgICAgICAgICAgIHZhbCBmaXJzdCA9IGJhdGNoLm9wdEpTT05PYmplY3QoMCk/Lm9wdFN0cmluZygiYyIpLm9yRW1wdHkoKQogICAgICAgICAgICB2YWwgbGFzdCA9IGJhdGNoLm9wdEpTT05PYmplY3QoYmF0Y2gubGVuZ3RoKCkgLSAxKT8ub3B0U3RyaW5nKCJjIikub3JFbXB0eSgpCiAgICAgICAgICAgIHJldHVybiBKU09OT2JqZWN0KCkuYXBwbHkgewogICAgICAgICAgICAgICAgcHV0KCJzY2FuX3RpbWUiLCByb290Lm9wdFN0cmluZygic2Nhbl90aW1lIiwgc3RhbXApKQogICAgICAgICAgICAgICAgcHV0KCJtb2RlIiwgcm9vdC5vcHRTdHJpbmcoIm1vZGUiLCAiRlVMTCIpKQogICAgICAgICAgICAgICAgcHV0KCJiYXRjaCIsIG51bWJlcikKICAgICAgICAgICAgICAgIHB1dCgic3RvY2tfc3RhcnQiLCBmaXJzdCkKICAgICAgICAgICAgICAgIHB1dCgic3RvY2tfZW5kIiwgbGFzdCkKICAgICAgICAgICAgICAgIHB1dCgic3RvY2tfY291bnQiLCBiYXRjaC5sZW5ndGgoKSkKICAgICAgICAgICAgICAgIHB1dCgic2hhcl9saW1pdCIsIENIQVJfTElNSVQpCiAgICAgICAgICAgICAgICBwdXQoInN0b2NrcyIsIGJhdGNoKQogICAgICAgICAgICB9LnRvU3RyaW5nKCkKICAgICAgICB9CgogICAgICAgIGZ1biBmbHVzaCgpIHsKICAgICAgICAgICAgaWYgKGN1cnJlbnQubGVuZ3RoKCkgPT0gMCkgcmV0dXJuCiAgICAgICAgICAgIHZhbCB0ZXh0ID0gYnVpbGRUZXh0KGN1cnJlbnQsIGJhdGNoTm8pCiAgICAgICAgICAgIHJlcXVpcmUodGV4dC5sZW5ndGggPD0gQ0hBUl9MSU1JVCkKICAgICAgICAgICAgRmlsZShkaXIsICJiYXRjaF8lMDNkLmpzb24iLmZvcm1hdChiYXRjaE5vKSkud3JpdGVUZXh0KHRleHQsIGphdmEubmlvLmNoYXJzZXRzLkNoYXJzZXRzLlVURl84KQogICAgICAgICAgICBpbmRleC5wdXQoSlNPTk9iamVjdCgpLmFwcGx5IHsKICAgICAgICAgICAgICAgIHB1dCgiYmF0Y2giLCBiYXRjaE5vKQogICAgICAgICAgICAgICAgcHV0KCJzdG9ja19zdGFydCIsIGN1cnJlbnQub3BKU09OT2JqZWN0KDApPy5vcHRTdHJpbmcoImMiKS5vckVtcHR5KCkpCiAgICAgICAgICAgICAgICBwdXQoInN0b2NrX2VuZCIsIGN1cnJlbnQub3BKU09OT2JqZWN0KGN1cnJlbnQubGVuZ3RoKCkgLSAxKT8ub3B0U3RyaW5nKCJjIikub3JFbXB0eSgpKQogICAgICAgICAgICAgICAgcHV0KCJzdG9ja19jb3VudCIsIGN1cnJlbnQubGVuZ3RoKCkpCiAgICAgICAgICAgICAgICBwdXQoImNoYXJhY3RlcnMiLCB0ZXh0Lmxlbmd0aCgpKQogICAgICAgICAgICAgICAgcHV0KCJmaWxlIiwgImJhdGNoXyUwM2QuanNvbiIuZm9ybWF0KGJhdGNoTm8pKQogICAgICAgICAgICB9KQogICAgICAgICAgICBtYXhDaGFycyA9IG1heE9mKG1heENoYXJzLCB0ZXh0Lmxlbmd0aCgpKQogICAgICAgICAgICBjdXJyZW50ID0gSlNPTkFycmF5KCkKICAgICAgICAgICAgYmF0Y2hObysrCiAgICAgICAgfQoKICAgICAgICBmb3IgKGkgaW4gMCB1bnRpbCBzdG9ja3MubGVuZ3RoKCkpIHsKICAgICAgICAgICAgdmFsIHN0b2NrID0gc3RvY2tzLm9wdEpTT05PYmplY3QoaSkKICAgICAgICAgICAgdmFsIGNhbmRpZGF0ZSA9IEpTT05BcnJheSgpCiAgICAgICAgICAgIGZvciAoaiBpbiAwIHVudGlsIGN1cnJlbnQubGVuZ3RoKCkpIGNhbmRpZGF0ZS5wdXQoa3VycmVudC5vcHRKU09OT2JqZWN0KGopKQogICAgICAgICAgICBjYW5kaWRhdGUucHV0KHN0b2NrKQogICAgICAgICAgICBpZiAoY3VycmVudC5sZW5ndGgoKSA+IDAgJiYgYnVpbGRUZXh0KGNhbmRpZGF0ZSwgYmF0Y2hObykubGVuZ3RoID4gQ0hBUl9MSU1JVCkgZmx1c2goKQogICAgICAgICAgICBjdXJyZW50LnB1dChzdG9jaykKICAgICAgICB9CiAgICAgICAgZmx1c2goCiAgICAgICAgdmFsIGluZGV4Um9vdCA9IEpTT05PYmplY3QoKS5hcHBseSB7CiAgICAgICAgICAgIHB1dCgic2Nhbl90aW1lIiwgcm9vdC5vcHRTdHJpbmcoInNjYW5fdGltZSIsIHN0YW1wKSkKICAgICAgICAgICAgcHV0KCJtb2RlIiwgcm9vdC5vcHRTdHJpbmcoIm1vZGUiLCAiRlVMTCIpKQogICAgICAgICAgICBwdXQoImNoYXJfbGltaXQiLCBDSEFSX0xJTUlUKQogICAgICAgICAgICBwdXQoInN0b2NrX2NvdW50Iiwgc3RvY2tzLmxlbmd0aCgpKQogICAgICAgICAgICBwdXQoImJhdGNoX2NvdW50IiwgaW5kZXgubGVuZ3RoKCkpCiAgICAgICAgICAgIHB1dCgibWF4X2JhdGNoX2NoYXJhY3RlcnMiLCBtYXhDaGFycykKICAgICAgICAgICAgcHV0KCJiYXRjaGVzIiwgaW5kZXgpCiAgICAgICAgfQogICAgICAgIEZpbGUoZGlyLCAiYmF0Y2hfaW5kZXguanNvbiIpLndyaXRlVGV4dChpbmRleFJvb3QudG9TdHJpbmcoKSwgamF2YS5uaW8uY2hhcnNldHMuQ2hhcnNldHMuVVRGXzgpCiAgICAgICAgcmV0dXJuIEV4cG9ydFJlc3VsdChpbmRleC5sZW5ndGgoKSwgZGlyLCBtYXhDaGFycykKICAgIH0KfQo="
-          Path("app/src/main/java/tw/v2scanner/BatchExporter.kt").write_bytes(base64.b64decode(batch_b64))
-
-          scanner = Path("app/src/main/java/tw/v2scanner/ScannerCore.kt")
-          s = scanner.read_text(encoding="utf-8")
-          needle = '            ScanPersistence.saveResult(context, json, csv, stamp)\n'
-          if 'BatchExporter.export(context, stamp, json)' not in s:
-              if needle not in s:
-                  raise SystemExit('ScanPersistence hook not found')
-              s = s.replace(needle, needle + '            val batches = BatchExporter.export(context, stamp, json)\n', 1)
-          s = s.replace('                .putInt("last_final_batch", result.finalBatchSize)\n', '                .putInt("last_final_batch", result.finalBatchSize)\n                .putInt("last_safe_batch_count", batches.count)\n                .putInt("last_safe_batch_max_chars", batches.maxChars)\n')
-          scanner.write_text(s, encoding="utf-8")
           PY
 
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add app/src/main/java/tw/v2scanner/MainActivity.kt app/src/main/java/tw/v2scanner/ScannerCore.kt app/src/main/java/tw/v2scanner/BatchExporter.kt
-          if ! git diff --cached --quiet; then
-            git commit -m "feat: v0.6.9 atomic 6000-char batches [skip ci]"
-            git push
-          fi
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          set -e
+          sdkmanager "platform-tools" "platforms;android-35" "build-tools;35.0.0"
 
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
-      - name: Configure Android SDK
-        shell: bash
-        run: |
-          set -e
-          yes | sdkmanager --licenses >/dev/null || true
-          sdkmanager "platforms;android-35" "build-tools;35.0.0"
+
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: "8.7"
+
       - name: Build v0.6.9 APK
         run: gradle assembleDebug
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
