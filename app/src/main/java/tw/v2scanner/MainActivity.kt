@@ -3,6 +3,9 @@ package tw.v2scanner
 import android.app.Activity
 import android.graphics.Color
 import android.os.Bundle
+import android.provider.Settings
+import android.content.Intent
+import android.net.Uri
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -207,7 +210,24 @@ class MainActivity : Activity() {
                 .putString("github_repo", githubRepo.text.toString().trim())
                 .putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" })
                 .apply()
-            if (auto.isChecked) ScanScheduler.schedule(this, times) else ScanScheduler.cancel(this)
+
+            // Remove the old inexact alarms before installing the exact schedule.
+            ScanScheduler.cancel(this)
+            if (auto.isChecked) {
+                if (!ExactScanScheduler.canScheduleExact(this)) {
+                    ScheduleDiagnostics.mark(this, "schedule_engine", "EXACT_ALARM_PERMISSION_MISSING")
+                    try {
+                        startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
+                    } catch (_: Exception) {
+                        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
+                    }
+                    Toast.makeText(this, "請允許『鬧鐘與提醒』後，再按一次「儲存設定」", Toast.LENGTH_LONG).show()
+                    return
+                }
+                ExactScanScheduler.schedule(this, times)
+            } else {
+                ExactScanScheduler.cancel(this)
+            }
             githubToken.text.clear()
             Toast.makeText(this, "設定已儲存", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
@@ -225,7 +245,8 @@ class MainActivity : Activity() {
         val times = prefs.getString("schedule_times", ScanScheduler.DEFAULT_TIMES) ?: ScanScheduler.DEFAULT_TIMES
         val diag = getSharedPreferences("diagnostics", 0)
         val l1 = diag.getString("layer1_status", "尚未執行") ?: "尚未執行"
-        status.text = "排程：${if (prefs.getBoolean("auto", false)) "已啟用" else "未啟用"}\n時間：$times\nGitHub Token：$token\n第一層：$l1"
+        val engine = diag.getString("schedule_engine", "EXACT_ALARM") ?: "EXACT_ALARM"
+        status.text = "排程：${if (prefs.getBoolean("auto", false)) "已啟用" else "未啟用"}\n時間：$times\n排程引擎：$engine\nGitHub Token：$token\n第一層：$l1"
     }
 
     private fun exportLast(type: String) {
@@ -246,10 +267,10 @@ class MainActivity : Activity() {
         val file = File(dir, "TaiwanV2Scanner_latest.json")
         file.writeText(content, Charsets.UTF_8)
         val uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
-        startActivity(android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+        startActivity(Intent(Intent.ACTION_SEND).apply {
             type = "application/json"
-            putExtra(android.content.Intent.EXTRA_STREAM, uri)
-            addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
         })
     }
 
