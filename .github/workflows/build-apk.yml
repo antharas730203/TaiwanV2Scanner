@@ -43,8 +43,9 @@ jobs:
           test -n "$KEYSTORE_PASSWORD"
           test -n "$KEY_ALIAS"
           test -n "$KEY_PASSWORD"
-          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > TaiwanV2Scanner-release.jks
-          test -s TaiwanV2Scanner-release.jks
+          mkdir -p app
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > app/TaiwanV2Scanner-release.jks
+          test -s app/TaiwanV2Scanner-release.jks
           {
             printf '%s\n' 'storeFile=TaiwanV2Scanner-release.jks'
             printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD"
@@ -81,7 +82,7 @@ jobs:
       - name: Remove signing material
         if: always()
         run: |
-          rm -f TaiwanV2Scanner-release.jks keystore.properties
+          rm -f app/TaiwanV2Scanner-release.jks keystore.properties
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
