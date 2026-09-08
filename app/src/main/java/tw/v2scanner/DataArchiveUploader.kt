@@ -99,16 +99,20 @@ object DataArchiveUploader {
         }
     }
 
-    private fun loadToken(context: Context): String? = try {
-        val stored = context.getSharedPreferences(PREFS, 0).getString(TOKEN_KEY, null) ?: return null
-        val bytes = Base64.decode(stored, Base64.NO_WRAP)
-        if (bytes.size <= 12) return null
-        val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
-        val key = ks.getKey(ALIAS, null) as? SecretKey ?: return null
-        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
-        String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8)
-    } catch (_: Exception) { null }
+    private fun loadToken(context: Context): String? {
+        return try {
+            val stored = context.getSharedPreferences(PREFS, 0).getString(TOKEN_KEY, null) ?: return null
+            val bytes = Base64.decode(stored, Base64.NO_WRAP)
+            if (bytes.size <= 12) return null
+            val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
+            val key = ks.getKey(ALIAS, null) as? SecretKey ?: return null
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, bytes.copyOfRange(0, 12)))
+            String(cipher.doFinal(bytes.copyOfRange(12, bytes.size)), Charsets.UTF_8)
+        } catch (_: Exception) {
+            null
+        }
+    }
 
     private fun putFile(token: String, owner: String, repo: String, branch: String, path: String, text: String, message: String) {
         val encodedPath = path.split('/').joinToString("/") { URLEncoder.encode(it, "UTF-8").replace("+", "%20") }
