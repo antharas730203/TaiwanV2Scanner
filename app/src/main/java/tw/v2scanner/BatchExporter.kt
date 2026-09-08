@@ -30,9 +30,10 @@ object BatchExporter {
         for (i in 0 until stocks.length()) {
             val source = stocks.optJSONObject(i) ?: continue
             val market = source.optString("market").ifBlank { "TWSE" }
-            val stock = JSONObject(source.toString())
-            stock.put("_read_index", "STOCK_START")
-            if (market.equals("TPEX", true)) tpex.put(stock) else twse.put(stock)
+            val marked = JSONObject(source.toString()).apply {
+                put("_read_index", "STOCK_START")
+            }
+            if (market.equals("TPEX", true)) tpex.put(marked) else twse.put(marked)
             records += StockRecord(market, source)
         }
 
@@ -49,27 +50,25 @@ object BatchExporter {
         tpexFile.writeText(tpexText, Charsets.UTF_8)
         layer1File.writeText(layer1Text, Charsets.UTF_8)
 
-        val files = JSONArray().apply {
-            put(fileInfo(twseFile, twseText))
-            put(fileInfo(tpexFile, tpexText))
-            put(fileInfo(layer1File, layer1Text))
-        }
-        val index = JSONObject().apply {
+        // Keep a tiny local manifest for diagnostics only. It is not needed by the
+        // GitHub reader because the read marker lives inside each data file.
+        val manifest = JSONObject().apply {
             put("scan_time", stamp)
-            put("char_limit", CHAR_LIMIT)
-            put("format", "complete_file_read_in_6000_char_units")
-            put("note", "Index is guidance only; complete data files are not split.")
-            put("files", files)
+            put("read_unit", CHAR_LIMIT)
+            put("files", JSONArray().apply {
+                put(fileInfo(twseFile, twseText))
+                put(fileInfo(tpexFile, tpexText))
+                put(fileInfo(layer1File, layer1Text))
+            })
         }
-        val indexFile = File(dir, "${stamp}_INDEX.json")
-        indexFile.writeText(index.toString(), Charsets.UTF_8)
+        File(dir, "${stamp}_MANIFEST.json").writeText(manifest.toString(), Charsets.UTF_8)
 
         val layer1Count = JSONObject(layer1Json).optInt("qualified_count", 0)
         context.getSharedPreferences("diagnostics", 0).edit()
             .putString("layer1_status", "LAYER1_COMPLETE")
             .putInt("layer1_count", layer1Count)
             .putInt("layer1_source_records", records.size)
-            .putString("archive_local", "成功：TWSE/TPEX/LAYER1/INDEX｜$stamp")
+            .putString("archive_local", "成功：TWSE/TPEX/LAYER1｜$stamp")
             .apply()
 
         // Keep the latest Layer1 result for the manual "上傳最新 JSON" action.
@@ -89,8 +88,8 @@ object BatchExporter {
             .putString("archive_upload", archiveResult)
             .apply()
 
-        val maxChars = maxOf(twseText.length, tpexText.length, layer1Text.length, index.length())
-        return ExportResult(4, dir, maxChars, records.size)
+        val maxChars = maxOf(twseText.length, tpexText.length, layer1Text.length, manifest.length())
+        return ExportResult(3, dir, maxChars, records.size)
     }
 
     private fun marketJson(stamp: String, market: String, stocks: JSONArray): String = JSONObject().apply {
@@ -99,16 +98,21 @@ object BatchExporter {
         put("market", market)
         put("stock_count", stocks.length())
         put("read_unit", CHAR_LIMIT)
+        put("read_rule", "max_6000_chars_per_read; use _read_index boundaries when available")
         put("stocks", stocks)
     }.toString()
 
     private fun addReadMarkers(source: String): String {
         val root = JSONObject(source)
-        val stocks = root.optJSONArray("stocks") ?: return source
-        for (i in 0 until stocks.length()) {
-            stocks.optJSONObject(i)?.put("_read_index", "STOCK_START")
+        val keys = arrayOf("qualified", "stocks", "results", "items")
+        for (key in keys) {
+            val array = root.optJSONArray(key) ?: continue
+            for (i in 0 until array.length()) {
+                array.optJSONObject(i)?.put("_read_index", "STOCK_START")
+            }
         }
         root.put("read_unit", CHAR_LIMIT)
+        root.put("read_rule", "max_6000_chars_per_read; use _read_index boundaries when available")
         return root.toString()
     }
 
