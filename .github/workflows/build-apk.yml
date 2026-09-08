@@ -31,17 +31,46 @@ jobs:
         with:
           gradle-version: "8.7"
 
+      - name: Restore release signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_BASE64"
+          test -n "$KEYSTORE_PASSWORD"
+          test -n "$KEY_ALIAS"
+          test -n "$KEY_PASSWORD"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > TaiwanV2Scanner-release.jks
+          test -s TaiwanV2Scanner-release.jks
+          {
+            printf '%s\n' 'storeFile=TaiwanV2Scanner-release.jks'
+            printf 'storePassword=%s\n' "$KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+          } > keystore.properties
+
       - name: Build debug APK
         run: gradle assembleDebug
 
-      - name: Verify APK version
+      - name: Build release APK
+        run: gradle assembleRelease
+
+      - name: Verify APKs
         run: |
           set -euo pipefail
-          APK=$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' | head -n 1)
-          test -n "$APK"
-          echo "Built APK: $APK"
-          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "package: name='tw.v2scanner' versionCode='17' versionName='0.8.2'"
+          DEBUG_APK=$(find app/build/outputs/apk/debug -maxdepth 1 -name '*.apk' | head -n 1)
+          RELEASE_APK=$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -n 1)
+          test -n "$DEBUG_APK"
+          test -n "$RELEASE_APK"
+          echo "Built debug APK: $DEBUG_APK"
+          echo "Built release APK: $RELEASE_APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$DEBUG_APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$RELEASE_APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$DEBUG_APK" | grep -E "package: name='tw.v2scanner' versionCode='17' versionName='0.8.2'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$RELEASE_APK" | grep -E "package: name='tw.v2scanner' versionCode='17' versionName='0.8.2'"
 
       - name: Read version
         id: version
@@ -49,9 +78,16 @@ jobs:
           VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
-      - name: Upload APK
+      - name: Remove signing material
+        if: always()
+        run: |
+          rm -f TaiwanV2Scanner-release.jks keystore.properties
+
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          name: TaiwanV2Scanner-v${{ steps.version.outputs.version }}-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: TaiwanV2Scanner-v${{ steps.version.outputs.version }}-debug-release
+          path: |
+            app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/release/*.apk
           if-no-files-found: error
