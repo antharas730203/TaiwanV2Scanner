@@ -5,25 +5,17 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
-android {
-    val keystorePropertiesFile = rootProject.file("keystore.properties")
-    val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+val releaseRequested = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
 
-    if (keystorePropertiesFile.exists()) {
-        keystorePropertiesFile.inputStream().use {
-            keystoreProperties.load(it)
-        }
-
-        signingConfigs {
-            create("release") {
-                storeFile = file(keystoreProperties["storeFile"] as String)
-                storePassword = keystoreProperties["storePassword"] as String
-                keyAlias = keystoreProperties["keyAlias"] as String
-                keyPassword = keystoreProperties["keyPassword"] as String
-            }
-        }
+if (keystorePropertiesFile.exists()) {
+    keystorePropertiesFile.inputStream().use {
+        keystoreProperties.load(it)
     }
+}
 
+android {
     namespace = "tw.v2scanner"
     compileSdk = 35
     defaultConfig {
@@ -36,8 +28,13 @@ android {
     buildTypes {
         release {
             if (keystorePropertiesFile.exists()) {
-                signingConfig = signingConfigs.getByName("release")
-            } else {
+                signingConfig = signingConfigs.create("release") {
+                    storeFile = file(keystoreProperties["storeFile"] as String)
+                    storePassword = keystoreProperties["storePassword"] as String
+                    keyAlias = keystoreProperties["keyAlias"] as String
+                    keyPassword = keystoreProperties["keyPassword"] as String
+                }
+            } else if (releaseRequested) {
                 throw GradleException("Missing keystore.properties: release APK must use the established signing key")
             }
         }
