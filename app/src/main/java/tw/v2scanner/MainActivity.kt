@@ -20,6 +20,8 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -45,6 +47,20 @@ class MainActivity : Activity() {
         showMain()
     }
 
+    private fun applySafeArea(root: View, baseLeft: Int, baseTop: Int, baseRight: Int, baseBottom: Int) {
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val bars = insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout())
+            view.setPadding(
+                baseLeft + bars.left,
+                baseTop + bars.top,
+                baseRight + bars.right,
+                baseBottom + bars.bottom
+            )
+            insets
+        }
+        ViewCompat.requestApplyInsets(root)
+    }
+
     private fun showMain() {
         showingSettings = false
         setContentView(buildMainUi())
@@ -61,9 +77,10 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(12), dp(16), dp(12))
         }
+        applySafeArea(root, dp(16), dp(12), dp(16), dp(12))
         val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         header.addView(TextView(this).apply {
-            text = "台股 V2 掃描器 V0.8.1"
+            text = "台股 V2 掃描器 V0.8.2"
             textSize = 24f
         }, LinearLayout.LayoutParams(0, -2, 1f))
         header.addView(Button(this).apply {
@@ -106,6 +123,7 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(16), dp(12), dp(16), dp(12))
         }
+        applySafeArea(root, dp(16), dp(12), dp(16), dp(12))
         root.addView(TextView(this).apply { text = "設定"; textSize = 24f })
         val scroll = ScrollView(this)
         val config = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
