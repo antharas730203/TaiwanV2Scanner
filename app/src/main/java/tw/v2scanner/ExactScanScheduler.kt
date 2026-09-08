@@ -6,6 +6,13 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import androidx.work.Constraints
+import androidx.work.ExistingWorkPolicy
+import androidx.work.NetworkType
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.Worker
+import androidx.work.WorkerParameters
 import java.util.Calendar
 
 /**
@@ -118,18 +125,51 @@ class ExactScanAlarmReceiver : BroadcastReceiver() {
     }
 
     private fun enqueueScan(context: Context) {
-        val request = androidx.work.OneTimeWorkRequestBuilder<ScheduledScanWorker>()
+        val request = OneTimeWorkRequestBuilder<ScheduledAutoUploadWorker>()
             .setConstraints(
-                androidx.work.Constraints.Builder()
-                    .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
                     .build()
             )
             .addTag("taiwan_v2_scheduled_scan_exact")
             .build()
-        androidx.work.WorkManager.getInstance(context).enqueueUniqueWork(
+        WorkManager.getInstance(context).enqueueUniqueWork(
             "taiwan_v2_scheduled_scan_exact",
-            androidx.work.ExistingWorkPolicy.APPEND_OR_REPLACE,
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
             request
         )
+    }
+}
+
+/**
+ * Scheduled scan wrapper. The legacy github_auto_upload flag is disabled while
+ * the scan runs so the old uploader cannot also write duplicate/legacy files.
+ * BatchExporter handles the new archive upload using schedule_github_upload.
+ */
+class ScheduledAutoUploadWorker(appContext: Context, params: WorkerParameters) : Worker(appContext, params) {
+    override fun doWork(): Result {
+        val prefs = applicationContext.getSharedPreferences("settings", 0)
+        val oldLegacyUpload = prefs.getBoolean("github_auto_upload", false)
+        prefs.edit()
+            .putBoolean("github_auto_upload", false)
+            .putString("scan_origin", "scheduled")
+            .apply()
+        ScheduleDiagnostics.mark(applicationContext, "last_worker_started")
+        return try {
+            val report = ScanEngine.runFull(applicationContext)
+            ScheduleDiagnostics.mark(applicationContext, "last_worker_finished")
+            applicationContext.getSharedPreferences("diagnostics", 0).edit()
+                .putString("last_worker_report", report.take(3000))
+                .apply()
+            Result.success()
+        } catch (e: Exception) {
+            ScheduleDiagnostics.mark(applicationContext, "last_worker_error", "${e.javaClass.simpleName}: ${e.message}")
+            Result.retry()
+        } finally {
+            prefs.edit()
+                .putBoolean("github_auto_upload", oldLegacyUpload)
+                .putString("scan_origin", "idle")
+                .apply()
+        }
     }
 }
