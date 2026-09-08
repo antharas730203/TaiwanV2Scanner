@@ -70,8 +70,8 @@ jobs:
           echo "Built release APK: $RELEASE_APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$DEBUG_APK"
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$RELEASE_APK"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$DEBUG_APK" | grep -E "package: name='tw.v2scanner' versionCode='17' versionName='0.8.2'"
-          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$RELEASE_APK" | grep -E "package: name='tw.v2scanner' versionCode='17' versionName='0.8.2'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$DEBUG_APK" | grep -E "package: name='tw.v2scanner' versionCode='18' versionName='0.8.2'"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$RELEASE_APK" | grep -E "package: name='tw.v2scanner' versionCode='18' versionName='0.8.2'"
 
       - name: Read version
         id: version
