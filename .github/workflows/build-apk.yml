@@ -33,18 +33,64 @@ jobs:
 
       - name: Restore signing keystore
         env:
-          KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_BASE64 || secrets.KEYSTORE_BASE64 || secrets.ANDROID_KEYSTORE_BASE64 }}
-          STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD || secrets.KEYSTORE_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS || secrets.KEY_ALIAS || secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD || secrets.KEY_PASSWORD || secrets.ANDROID_KEY_PASSWORD }}
+          KS1: ${{ secrets.SIGNING_KEYSTORE_BASE64 }}
+          SP1: ${{ secrets.SIGNING_STORE_PASSWORD }}
+          KA1: ${{ secrets.SIGNING_KEY_ALIAS }}
+          KP1: ${{ secrets.SIGNING_KEY_PASSWORD }}
+          KS2: ${{ secrets.KEYSTORE_BASE64 }}
+          SP2: ${{ secrets.KEYSTORE_PASSWORD }}
+          KA2: ${{ secrets.KEY_ALIAS }}
+          KP2: ${{ secrets.KEY_PASSWORD }}
+          KS3: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          SP3: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KA3: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KP3: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          test -n "$KEYSTORE_B64" || { echo "Missing signing keystore secret"; exit 1; }
-          test -n "$STORE_PASSWORD" || { echo "Missing signing store password secret"; exit 1; }
-          test -n "$KEY_ALIAS" || { echo "Missing signing key alias secret"; exit 1; }
-          test -n "$KEY_PASSWORD" || { echo "Missing signing key password secret"; exit 1; }
-          echo "$KEYSTORE_B64" | base64 --decode > signing.jks
-          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$GITHUB_WORKSPACE/signing.jks" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+          found=0
+          rm -f signing.jks keystore.properties probe.jar probe-signed.jar
+          mkdir -p signing-probe
+          printf 'probe' > signing-probe/probe.txt
+          (cd signing-probe && zip -q ../probe.jar probe.txt)
+
+          for i in 1 2 3; do
+            ks_var="KS$i"
+            sp_var="SP$i"
+            ka_var="KA$i"
+            kp_var="KP$i"
+            ks="${!ks_var:-}"
+            sp="${!sp_var:-}"
+            ka="${!ka_var:-}"
+            kp="${!kp_var:-}"
+            [ -n "$ks" ] || continue
+            [ -n "$sp" ] || continue
+            [ -n "$ka" ] || continue
+            [ -n "$kp" ] || continue
+
+            candidate="candidate-$i.jks"
+            rm -f "$candidate" probe-signed.jar
+            if ! printf '%s' "$ks" | base64 --decode > "$candidate" 2>/dev/null; then
+              continue
+            fi
+            if ! keytool -list -keystore "$candidate" -storepass "$sp" -alias "$ka" >/dev/null 2>&1; then
+              continue
+            fi
+            if ! jarsigner -keystore "$candidate" -storepass "$sp" -keypass "$kp" -signedjar probe-signed.jar probe.jar "$ka" >/dev/null 2>&1; then
+              continue
+            fi
+
+            cp "$candidate" signing.jks
+            printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$GITHUB_WORKSPACE/signing.jks" "$sp" "$ka" "$kp" > keystore.properties
+            echo "Compatible signing credentials found."
+            found=1
+            break
+          done
+
+          rm -rf signing-probe candidate-1.jks candidate-2.jks candidate-3.jks probe.jar probe-signed.jar
+          if [ "$found" -ne 1 ]; then
+            echo "No compatible signing credential set was found. The keystore/password/alias/key-password secrets do not match."
+            exit 1
+          fi
 
       - name: Build signed release APK
         run: gradle assembleRelease
