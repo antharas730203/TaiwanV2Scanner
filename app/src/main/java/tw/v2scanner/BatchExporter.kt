@@ -122,8 +122,16 @@ object BatchExporter {
         }
         File(dir, "batch_index.json").writeText(indexRoot.toString(), Charsets.UTF_8)
 
-        // New V0.8.2 Debug archive: upload complete TWSE/TPEX/LAYER1 files plus one index.
-        val archiveResult = DataArchiveUploader.upload(context, stamp, fullJson, layer1Json)
+        // GitHub archive upload is intentionally schedule-only.
+        // Manual scans never upload implicitly; use the "上傳最新 JSON" button instead.
+        val prefs = context.getSharedPreferences("settings", 0)
+        val scanOrigin = prefs.getString("scan_origin", "manual") ?: "manual"
+        val scheduleUpload = prefs.getBoolean("schedule_github_upload", false)
+        val archiveResult = if (scanOrigin == "scheduled" && scheduleUpload) {
+            DataArchiveUploader.upload(context, stamp, fullJson, layer1Json)
+        } else {
+            "未自動上傳（手動掃描或排程自動上傳未啟用）"
+        }
         context.getSharedPreferences("diagnostics", 0).edit()
             .putString("archive_upload", archiveResult)
             .apply()
