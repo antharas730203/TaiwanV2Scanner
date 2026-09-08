@@ -12,9 +12,10 @@ import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/** V0.8.2 Debug experimental archive uploader.
- * Keeps one complete TWSE file, one complete TPEX file and one Layer1 file per scan.
- * An index file describes the safe 6000-character reading unit; it does not split data.
+/** V0.8.2 Debug archive uploader.
+ * Uploads complete TWSE/TPEX/LAYER1 JSON files.
+ * The files carry lightweight per-record read markers; data is never split into files.
+ * Readers should use <=6000-character units and record boundaries when available.
  */
 object DataArchiveUploader {
     private const val API = "https://api.github.com"
@@ -37,12 +38,13 @@ object DataArchiveUploader {
             val tpex = JSONArray()
             for (i in 0 until stocks.length()) {
                 val stock = stocks.optJSONObject(i) ?: continue
-                if (stock.optString("market").equals("TPEX", true)) tpex.put(stock) else twse.put(stock)
+                val marked = JSONObject(stock.toString()).apply { put("_read_index", "STOCK_START") }
+                if (stock.optString("market").equals("TPEX", true)) tpex.put(marked) else twse.put(marked)
             }
 
             val twseText = marketJson(stamp, "TWSE", twse)
             val tpexText = marketJson(stamp, "TPEX", tpex)
-            val layer1Text = layer1Json
+            val layer1Text = addReadMarkers(layer1Json)
             val twsePath = "scanner_data/history/${stamp}_TWSE.json"
             val tpexPath = "scanner_data/history/${stamp}_TPEX.json"
             val layer1Path = "scanner_data/history/${stamp}_LAYER1.json"
@@ -51,19 +53,7 @@ object DataArchiveUploader {
             putFile(token, owner, repo, branch, tpexPath, tpexText, "Add TPEX archive $stamp")
             putFile(token, owner, repo, branch, layer1Path, layer1Text, "Add LAYER1 archive $stamp")
 
-            val index = JSONObject().apply {
-                put("scan_time", stamp)
-                put("char_limit", 6000)
-                put("format", "complete_file_read_in_6000_char_units")
-                put("files", JSONArray().apply {
-                    put(fileIndex(twsePath, twseText))
-                    put(fileIndex(tpexPath, tpexText))
-                    put(fileIndex(layer1Path, layer1Text))
-                })
-            }
-            val indexPath = "scanner_data/history/${stamp}_INDEX.json"
-            putFile(token, owner, repo, branch, indexPath, index.toString(), "Add archive index $stamp")
-            "成功：TWSE/TPEX/LAYER1/INDEX｜$stamp"
+            "成功：TWSE/TPEX/LAYER1｜$stamp"
         } catch (e: Exception) {
             "失敗：Archive ${e.javaClass.simpleName} - ${e.message ?: "無詳細訊息"}"
         }
@@ -74,29 +64,22 @@ object DataArchiveUploader {
         put("mode", "FULL")
         put("market", market)
         put("stock_count", stocks.length())
+        put("read_rule", "max_6000_chars_per_read; never split a marked record when a boundary is available")
         put("stocks", stocks)
     }.toString()
 
-    private fun fileIndex(path: String, text: String): JSONObject {
-        val chunks = JSONArray()
-        var start = 0
-        var part = 1
-        while (start < text.length) {
-            val end = minOf(start + 6000, text.length)
-            chunks.put(JSONObject().apply {
-                put("part", part++)
-                put("start", start)
-                put("length", end - start)
-                put("end_exclusive", end)
-            })
-            start = end
+    private fun addReadMarkers(layer1Json: String): String {
+        val root = JSONObject(layer1Json)
+        val keys = arrayOf("qualified", "stocks", "results", "items")
+        for (key in keys) {
+            val array = root.optJSONArray(key) ?: continue
+            for (i in 0 until array.length()) {
+                val obj = array.optJSONObject(i) ?: continue
+                obj.put("_read_index", "STOCK_START")
+            }
         }
-        return JSONObject().apply {
-            put("file", path.substringAfterLast('/'))
-            put("path", path)
-            put("characters", text.length)
-            put("parts", chunks)
-        }
+        root.put("read_rule", "max_6000_chars_per_read; use _read_index boundaries when available")
+        return root.toString()
     }
 
     private fun loadToken(context: Context): String? {
