@@ -20,7 +20,10 @@ import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.core.content.FileProvider
+import org.json.JSONObject
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
 
 class MainActivity : Activity() {
     private lateinit var status: TextView
@@ -81,7 +84,7 @@ class MainActivity : Activity() {
         root.addView(status)
         val actions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         actions.addView(button("手動完整掃描").apply { setOnClickListener { runFullScan(this) } })
-        actions.addView(button("驗證 GitHub").apply { setOnClickListener { Toast.makeText(this@MainActivity, "GitHub 驗證功能沿用既有核心", Toast.LENGTH_SHORT).show() } })
+        actions.addView(button("驗證 GitHub").apply { setOnClickListener { verifyGitHubButton(this) } })
         actions.addView(button("匯出最後一次 JSON").apply { setOnClickListener { exportLast("json") } })
         actions.addView(button("匯出最後一次 CSV").apply { setOnClickListener { exportLast("csv") } })
         actions.addView(button("分享最後一次 JSON").apply { setOnClickListener { shareLastJson() } })
@@ -120,7 +123,7 @@ class MainActivity : Activity() {
         config.addView(githubBranch)
         config.addView(githubToken)
         config.addView(button("驗證 GitHub").apply {
-            setOnClickListener { Toast.makeText(this@MainActivity, "GitHub 驗證功能沿用既有核心", Toast.LENGTH_SHORT).show() }
+            setOnClickListener { verifyGitHubButton(this) }
         })
 
         config.addView(TextView(this).apply { text = "自動排程"; textSize = 18f })
@@ -195,6 +198,59 @@ class MainActivity : Activity() {
         }.start()
     }
 
+    private fun verifyGitHubButton(button: View) {
+        button.isEnabled = false
+        status.text = "正在驗證 GitHub Token／Repository……"
+        result.text = "正在向 GitHub API 驗證目前 Token。\n\n這一步只讀取 Repository，不會修改任何檔案。"
+        Thread {
+            val report = verifyGitHubAccess()
+            runOnUiThread {
+                status.text = report.lineSequence().firstOrNull() ?: report
+                result.text = report
+                button.isEnabled = true
+            }
+        }.start()
+    }
+
+    private fun verifyGitHubAccess(): String {
+        val token = GitHubTokenStore.load(this)
+            ?: return "GitHub 驗證失敗：Token 未設定。\n\n請在 GitHub 設定中貼上新的 Fine-grained PAT，儲存後再驗證。"
+        val owner = prefs.getString("github_owner", "antharas730203").orEmpty().trim()
+        val repo = prefs.getString("github_repo", "TaiwanV2Scanner").orEmpty().trim()
+        val branch = prefs.getString("github_branch", "main").orEmpty().trim().ifEmpty { "main" }
+        if (owner.isBlank() || repo.isBlank()) return "GitHub 驗證失敗：Repository 設定不完整。"
+        return try {
+            val url = URL("https://api.github.com/repos/$owner/$repo")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 8000
+                readTimeout = 12000
+                setRequestProperty("Authorization", "Bearer $token")
+                setRequestProperty("Accept", "application/vnd.github+json")
+                setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
+                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.8.2")
+            }
+            val code = conn.responseCode
+            val body = try {
+                (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            } finally {
+                conn.disconnect()
+            }
+            when (code) {
+                200 -> {
+                    val obj = JSONObject(body)
+                    "GitHub 驗證成功 ✓\n\nRepository：${obj.optString("full_name", "$owner/$repo")}\n分支：$branch\nToken：有效\n\n目前已確認 App 可以用這組 Token 讀取 Repository。\n接下來「測試 GitHub 上傳 JSON」即可確認 Contents 寫入。"
+                }
+                401 -> "GitHub 驗證失敗：HTTP 401\n\nToken 無效、已撤銷、過期，或 App 裡保存的 Token 已失效。\n\n請重新貼上目前有效的 Fine-grained PAT。"
+                403 -> "GitHub 驗證失敗：HTTP 403\n\nToken 已被 GitHub 辨識，但權限不足。請確認 Token 對 TaiwanV2Scanner 的 Contents 具有 Read and write 權限。"
+                404 -> "GitHub 驗證失敗：HTTP 404\n\nRepository 找不到，或 Token 沒有被授權存取 $owner/$repo。"
+                else -> "GitHub 驗證失敗：HTTP $code\n\nGitHub 回應：${body.take(300)}"
+            }
+        } catch (e: Exception) {
+            "GitHub 驗證失敗：${e.javaClass.simpleName}\n\n${e.message ?: "無詳細訊息"}"
+        }
+    }
+
     private fun saveSettings(tradingMode: Boolean) {
         try {
             val times = scheduleTimes.text.toString().trim().ifEmpty { ScanScheduler.DEFAULT_TIMES }
@@ -211,7 +267,6 @@ class MainActivity : Activity() {
                 .putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" })
                 .apply()
 
-            // Remove the old inexact alarms before installing the exact schedule.
             ScanScheduler.cancel(this)
             if (auto.isChecked) {
                 if (!ExactScanScheduler.canScheduleExact(this)) {
