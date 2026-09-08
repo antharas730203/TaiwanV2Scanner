@@ -1,11 +1,14 @@
 package tw.v2scanner
 
 import android.app.Activity
+import android.content.Intent
+import android.content.res.ColorStateList
 import android.graphics.Color
+import android.graphics.drawable.GradientDrawable
+import android.graphics.drawable.RippleDrawable
+import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.content.Intent
-import android.net.Uri
 import android.text.InputType
 import android.view.Gravity
 import android.view.View
@@ -19,7 +22,6 @@ import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
-import androidx.core.content.FileProvider
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import org.json.JSONObject
@@ -75,21 +77,21 @@ class MainActivity : Activity() {
     private fun buildMainUi(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setPadding(dp(16), dp(18), dp(16), dp(12))
         }
-        applySafeArea(root, dp(16), dp(12), dp(16), dp(12))
+        applySafeArea(root, dp(16), dp(18), dp(16), dp(12))
+
         val header = LinearLayout(this).apply { gravity = Gravity.CENTER_VERTICAL }
         header.addView(TextView(this).apply {
             text = "台股 V2 掃描器 V0.8.2"
             textSize = 24f
         }, LinearLayout.LayoutParams(0, -2, 1f))
-        header.addView(Button(this).apply {
-            text = "⚙"
-            setAllCaps(false)
+        header.addView(button("⚙").apply {
             contentDescription = "設定"
             setOnClickListener { showSettings() }
         }, LinearLayout.LayoutParams(dp(52), dp(52)))
         root.addView(header)
+
         root.addView(TextView(this).apply {
             text = "TWSE＋TPEX｜完整掃描｜第一層轉機／動能預篩｜原始 JSON｜6000 字元安全分批｜GitHub"
             textSize = 13f
@@ -99,14 +101,15 @@ class MainActivity : Activity() {
             setPadding(dp(10), dp(10), dp(10), dp(10))
         }
         root.addView(status)
+
         val actions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        actions.addView(button("手動完整掃描").apply { setOnClickListener { runFullScan(this) } })
-        actions.addView(button("驗證 GitHub").apply { setOnClickListener { verifyGitHubButton(this) } })
-        actions.addView(button("匯出最後一次 JSON").apply { setOnClickListener { exportLast("json") } })
-        actions.addView(button("匯出最後一次 CSV").apply { setOnClickListener { exportLast("csv") } })
-        actions.addView(button("分享最後一次 JSON").apply { setOnClickListener { shareLastJson() } })
-        actions.addView(button("查看排程診斷").apply { setOnClickListener { showDiagnostics() } })
+        actionButton(actions, "手動完整掃描") { runFullScan(this) }
+        actionButton(actions, "驗證 GitHub") { verifyGitHubButton(this) }
+        actionButton(actions, "匯出最新 JSON") { exportLatestJson() }
+        actionButton(actions, "上傳最新 JSON") { uploadLatestJson(this) }
+        actionButton(actions, "查看排程診斷") { showDiagnostics() }
         root.addView(actions)
+
         root.addView(TextView(this).apply { text = "執行結果"; textSize = 17f })
         result = TextView(this).apply {
             text = "尚未執行掃描。"
@@ -121,10 +124,11 @@ class MainActivity : Activity() {
     private fun buildSettingsUi(): View {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(12), dp(16), dp(12))
+            setPadding(dp(16), dp(18), dp(16), dp(12))
         }
-        applySafeArea(root, dp(16), dp(12), dp(16), dp(12))
+        applySafeArea(root, dp(16), dp(18), dp(16), dp(12))
         root.addView(TextView(this).apply { text = "設定"; textSize = 24f })
+
         val scroll = ScrollView(this)
         val config = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         scroll.addView(config)
@@ -140,9 +144,7 @@ class MainActivity : Activity() {
         config.addView(githubRepo)
         config.addView(githubBranch)
         config.addView(githubToken)
-        config.addView(button("驗證 GitHub").apply {
-            setOnClickListener { verifyGitHubButton(this) }
-        })
+        actionButton(config, "驗證 GitHub") { verifyGitHubButton(this) }
 
         config.addView(TextView(this).apply { text = "自動排程"; textSize = 18f })
         auto = CheckBox(this).apply {
@@ -150,8 +152,8 @@ class MainActivity : Activity() {
             isChecked = prefs.getBoolean("auto", false)
         }
         autoGitHub = CheckBox(this).apply {
-            text = "掃描完成後自動上傳 GitHub"
-            isChecked = prefs.getBoolean("github_auto_upload", false)
+            text = "排程掃描完成後自動上傳 GitHub"
+            isChecked = prefs.getBoolean("schedule_github_upload", prefs.getBoolean("github_auto_upload", false))
         }
         config.addView(auto)
         config.addView(autoGitHub)
@@ -179,10 +181,10 @@ class MainActivity : Activity() {
             setSingleLine(true)
         }
         config.addView(scheduleTimes)
-        config.addView(button("儲存設定").apply { setOnClickListener { saveSettings(trading.isChecked) } })
+        actionButton(config, "儲存設定") { saveSettings(trading.isChecked) }
 
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
-        root.addView(button("返回主畫面").apply { setOnClickListener { showMain() } })
+        actionButton(root, "返回主畫面") { showMain() }
         applyDarkTheme(root)
         return root
     }
@@ -194,7 +196,6 @@ class MainActivity : Activity() {
             if (view is EditText) view.setHintTextColor(Color.GRAY)
         }
         if (view is Button) {
-            view.setBackgroundColor(Color.rgb(45, 45, 45))
             view.setTextColor(Color.WHITE)
         }
         if (view is ViewGroup) {
@@ -205,8 +206,13 @@ class MainActivity : Activity() {
     private fun runFullScan(scanButton: View) {
         scanButton.isEnabled = false
         status.text = "正在完整掃描＋第一層……"
+        prefs.edit()
+            .putBoolean("github_auto_upload", false)
+            .putString("scan_origin", "manual")
+            .apply()
         Thread {
             val report = ScanEngine.runFull(this)
+            prefs.edit().putString("scan_origin", "idle").apply()
             runOnUiThread {
                 result.text = report
                 status.text = "手動掃描＋第一層完成"
@@ -257,7 +263,7 @@ class MainActivity : Activity() {
             when (code) {
                 200 -> {
                     val obj = JSONObject(body)
-                    "GitHub 驗證成功 ✓\n\nRepository：${obj.optString("full_name", "$owner/$repo")}\n分支：$branch\nToken：有效\n\n目前已確認 App 可以用這組 Token 讀取 Repository。\n接下來「測試 GitHub 上傳 JSON」即可確認 Contents 寫入。"
+                    "GitHub 驗證成功 ✓\n\nRepository：${obj.optString("full_name", "$owner/$repo")}\n分支：$branch\nToken：有效\n\n已確認 App 可以用這組 Token 讀取 Repository。\n「上傳最新 JSON」可再確認寫入權限。"
                 }
                 401 -> "GitHub 驗證失敗：HTTP 401\n\nToken 無效、已撤銷、過期，或 App 裡保存的 Token 已失效。\n\n請重新貼上目前有效的 Fine-grained PAT。"
                 403 -> "GitHub 驗證失敗：HTTP 403\n\nToken 已被 GitHub 辨識，但權限不足。請確認 Token 對 TaiwanV2Scanner 的 Contents 具有 Read and write 權限。"
@@ -277,7 +283,10 @@ class MainActivity : Activity() {
             if (token.isNotEmpty()) GitHubTokenStore.save(this, token)
             prefs.edit()
                 .putBoolean("auto", auto.isChecked)
-                .putBoolean("github_auto_upload", autoGitHub.isChecked)
+                .putBoolean("schedule_github_upload", autoGitHub.isChecked)
+                // Legacy uploader is intentionally disabled. New archive upload is schedule-only.
+                .putBoolean("github_auto_upload", false)
+                .putString("scan_origin", "idle")
                 .putString("schedule_mode", if (tradingMode) "trading" else "test")
                 .putString("schedule_times", times)
                 .putString("github_owner", githubOwner.text.toString().trim())
@@ -308,10 +317,6 @@ class MainActivity : Activity() {
         }
     }
 
-    override fun onBackPressed() {
-        if (showingSettings) showMain() else super.onBackPressed()
-    }
-
     private fun refreshStatus() {
         if (!::status.isInitialized) return
         val token = if (GitHubTokenStore.hasToken(this)) "已設定" else "未設定"
@@ -322,29 +327,51 @@ class MainActivity : Activity() {
         status.text = "排程：${if (prefs.getBoolean("auto", false)) "已啟用" else "未啟用"}\n時間：$times\n排程引擎：$engine\nGitHub Token：$token\n第一層：$l1"
     }
 
-    private fun exportLast(type: String) {
-        val content = if (type == "json") ScanPersistence.lastJson(this) else ScanPersistence.lastCsv(this)
-        if (content.isNullOrEmpty()) { Toast.makeText(this, "尚未有掃描資料", Toast.LENGTH_SHORT).show(); return }
+    private fun exportLatestJson() {
+        val content = ScanPersistence.lastJson(this)
+        if (content.isNullOrEmpty()) {
+            Toast.makeText(this, "尚未有掃描資料", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val stamp = try { JSONObject(content).optString("scan_time").ifBlank { System.currentTimeMillis().toString() } } catch (_: Exception) { System.currentTimeMillis().toString() }
         val dir = File(getExternalFilesDir(null), "exports")
         dir.mkdirs()
-        val file = File(dir, "TaiwanV2Scanner_${System.currentTimeMillis()}.$type")
+        val file = File(dir, "TaiwanV2Scanner_${stamp}.json")
         file.writeText(content, Charsets.UTF_8)
-        Toast.makeText(this, "已匯出：${file.name}", Toast.LENGTH_SHORT).show()
+        result.text = "最新 JSON 已匯出\n\n檔案：${file.name}\n字元：${content.length}"
+        Toast.makeText(this, "已匯出最新 JSON", Toast.LENGTH_SHORT).show()
     }
 
-    private fun shareLastJson() {
-        val content = ScanPersistence.lastJson(this)
-        if (content.isNullOrEmpty()) { Toast.makeText(this, "尚未有 JSON", Toast.LENGTH_SHORT).show(); return }
-        val dir = File(getExternalFilesDir(null), "share")
-        dir.mkdirs()
-        val file = File(dir, "TaiwanV2Scanner_latest.json")
-        file.writeText(content, Charsets.UTF_8)
-        val uri = FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
-        startActivity(Intent(Intent.ACTION_SEND).apply {
-            type = "application/json"
-            putExtra(Intent.EXTRA_STREAM, uri)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        })
+    private fun uploadLatestJson(button: View) {
+        button.isEnabled = false
+        status.text = "正在上傳最新 JSON 至 GitHub……"
+        result.text = "正在讀取最新完整掃描 JSON 與第一層結果。\n\n這次是手動上傳，不會啟用排程自動上傳。"
+        Thread {
+            val report = try {
+                val content = ScanPersistence.lastJson(this)
+                    ?: return@Thread "上傳失敗：尚未有最新 JSON。"
+                val root = JSONObject(content)
+                val mode = root.optString("mode", "")
+                if (mode != "FULL") {
+                    return@Thread "上傳失敗：最新資料不是完整市場掃描。\n\n目前 mode：$mode\n請先按「手動完整掃描」。"
+                }
+                val stamp = root.optString("scan_time").ifBlank { return@Thread "上傳失敗：最新 JSON 缺少 scan_time。" }
+                val baseDir = getExternalFilesDir(null) ?: filesDir
+                val layer1File = File(baseDir, "layer1_latest.json")
+                if (!layer1File.exists()) {
+                    return@Thread "上傳失敗：找不到最新第一層結果。\n\n請先重新執行「手動完整掃描」。"
+                }
+                val layer1Json = layer1File.readText(Charsets.UTF_8)
+                DataArchiveUploader.upload(this, stamp, content, layer1Json)
+            } catch (e: Exception) {
+                "上傳失敗：${e.javaClass.simpleName}\n\n${e.message ?: "無詳細訊息"}"
+            }
+            runOnUiThread {
+                result.text = report
+                status.text = if (report.startsWith("成功")) "最新 JSON 上傳完成" else "最新 JSON 上傳失敗"
+                button.isEnabled = true
+            }
+        }.start()
     }
 
     private fun showDiagnostics() {
@@ -359,7 +386,8 @@ class MainActivity : Activity() {
             append("安全批次：${diag.getInt("last_safe_batch_count", 0)}\n")
             append("最大批次字元：${diag.getInt("last_safe_batch_max_chars", 0)}\n")
             append("第一層：${diag.getString("layer1_status", "尚未執行")}\n")
-            append("第一層候選：${diag.getInt("layer1_count", 0)}")
+            append("第一層候選：${diag.getInt("layer1_count", 0)}\n")
+            append("GitHub Archive：${diag.getString("archive_upload", "尚未執行")}")
         }
     }
 
@@ -369,10 +397,37 @@ class MainActivity : Activity() {
         setSingleLine(true)
     }
 
+    private fun actionButton(parent: ViewGroup, textValue: String, onClick: (View) -> Unit) {
+        val b = button(textValue).apply { setOnClickListener(onClick) }
+        val lp = if (parent is LinearLayout) LinearLayout.LayoutParams(-1, dp(54)) else ViewGroup.LayoutParams(-1, dp(54))
+        if (lp is LinearLayout.LayoutParams) lp.setMargins(0, dp(5), 0, dp(5))
+        parent.addView(b, lp)
+    }
+
     private fun button(textValue: String) = Button(this).apply {
         text = textValue
         setAllCaps(false)
         gravity = Gravity.CENTER
+        minHeight = dp(52)
+        minimumHeight = dp(52)
+        setPadding(dp(12), 0, dp(12), 0)
+        setTextColor(Color.WHITE)
+        setTextSize(16f)
+        background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(14).toFloat()
+            setColor(Color.rgb(45, 45, 45))
+            setStroke(dp(1), Color.rgb(75, 75, 75))
+        }
+        foreground = RippleDrawable(
+            ColorStateList.valueOf(Color.argb(45, 255, 255, 255)),
+            null,
+            GradientDrawable().apply {
+                shape = GradientDrawable.RECTANGLE
+                cornerRadius = dp(14).toFloat()
+            }
+        )
+        elevation = dp(2).toFloat()
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
