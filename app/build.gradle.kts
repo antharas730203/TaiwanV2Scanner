@@ -33,6 +33,15 @@ android {
         versionCode = 17
         versionName = "0.8.2"
     }
+    buildTypes {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            } else {
+                throw GradleException("Missing keystore.properties: release APK must use the established signing key")
+            }
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
