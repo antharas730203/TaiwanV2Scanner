@@ -89,7 +89,6 @@ object BatchExporter {
             "批次輸出遺失股票：原始=${stocks.length()}，輸出=$writtenStocks"
         }
 
-        // Layer 1 is complete only after raw JSON, derived result and every batch succeed.
         File(dir, "layer1_result.json").writeText(layer1Json, Charsets.UTF_8)
         File(baseDir, "layer1_latest.json").writeText(layer1Json, Charsets.UTF_8)
         File(dir, "layer1_status.json").writeText(
@@ -122,6 +121,13 @@ object BatchExporter {
             put("batches", index)
         }
         File(dir, "batch_index.json").writeText(indexRoot.toString(), Charsets.UTF_8)
+
+        // New V0.8.2 Debug archive: upload complete TWSE/TPEX/LAYER1 files plus one index.
+        val archiveResult = DataArchiveUploader.upload(context, stamp, fullJson, layer1Json)
+        context.getSharedPreferences("diagnostics", 0).edit()
+            .putString("archive_upload", archiveResult)
+            .apply()
+
         return ExportResult(index.length(), dir, maxChars, writtenStocks)
     }
 }
