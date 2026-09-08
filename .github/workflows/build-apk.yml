@@ -31,11 +31,42 @@ jobs:
         with:
           gradle-version: "8.7"
 
-      - name: Build debug APK
-        run: gradle assembleDebug
+      - name: Restore signing keystore
+        env:
+          KEYSTORE_B64: ${{ secrets.SIGNING_KEYSTORE_BASE64 || secrets.KEYSTORE_BASE64 || secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.SIGNING_STORE_PASSWORD || secrets.KEYSTORE_PASSWORD || secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.SIGNING_KEY_ALIAS || secrets.KEY_ALIAS || secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.SIGNING_KEY_PASSWORD || secrets.KEY_PASSWORD || secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_B64" || { echo "Missing signing keystore secret"; exit 1; }
+          test -n "$STORE_PASSWORD" || { echo "Missing signing store password secret"; exit 1; }
+          test -n "$KEY_ALIAS" || { echo "Missing signing key alias secret"; exit 1; }
+          test -n "$KEY_PASSWORD" || { echo "Missing signing key password secret"; exit 1; }
+          echo "$KEYSTORE_B64" | base64 --decode > signing.jks
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' "$GITHUB_WORKSPACE/signing.jks" "$STORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" > keystore.properties
+
+      - name: Build signed release APK
+        run: gradle assembleRelease
+
+      - name: Verify APK version
+        run: |
+          set -euo pipefail
+          APK=$(find app/build/outputs/apk/release -maxdepth 1 -name '*.apk' | head -n 1)
+          test -n "$APK"
+          echo "Built APK: $APK"
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose "$APK"
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -E "package: name='tw.v2scanner' versionCode='17' versionName='0.8.2'"
+
+      - name: Read version
+        id: version
+        run: |
+          VERSION=$(sed -n 's/.*versionName = "\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: TaiwanV2Scanner-v0.8.1-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: TaiwanV2Scanner-v${{ steps.version.outputs.version }}-release-signed
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
