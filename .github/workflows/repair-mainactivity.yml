@@ -1,0 +1,26 @@
+name: Repair MainActivity
+
+on:
+  push:
+    branches: ["main"]
+
+permissions:
+  contents: write
+
+jobs:
+  repair:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Restore MainActivity from V0.8.3 commit and fix ScrollView API
+        run: |
+          set -euo pipefail
+          git checkout 69cba9ffd782a1e578f243a2c4fa5e4d8913203a -- app/src/main/java/tw/v2scanner/MainActivity.kt
+          sed -i 's/^[[:space:]]*fillViewport = true$/            setFillViewport(true)/' app/src/main/java/tw/v2scanner/MainActivity.kt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/tw/v2scanner/MainActivity.kt
+          git diff --cached --quiet && exit 0
+          git commit -m 'Fix V0.8.3 ScrollView fillViewport API'
+          git push origin HEAD:main
