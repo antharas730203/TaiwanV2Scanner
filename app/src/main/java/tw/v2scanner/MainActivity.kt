@@ -146,7 +146,7 @@ class MainActivity : Activity() {
         top.addView(roundButton("←", 52, false).apply {
             contentDescription = "關閉選單"
             setOnClickListener { toggleDrawer(false) }
-        }, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.END))
+        }, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.START))
         panel.addView(top)
 
         panel.addView(sectionHeader("GitHub 設定"), actionParams(12))
