@@ -12,7 +12,7 @@ import javax.crypto.Cipher
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-/** V0.8.2 Debug archive uploader.
+/** V0.8.3 archive uploader.
  * Uploads complete TWSE/TPEX/LAYER1 JSON files.
  * The files carry lightweight per-record read markers; data is never split into files.
  * Readers should use <=6000-character units and record boundaries when available.
@@ -23,7 +23,7 @@ object DataArchiveUploader {
     private const val TOKEN_KEY = "token"
     private const val ALIAS = "TaiwanV2ScannerGitHubKey"
 
-    fun upload(context: Context, stamp: String, fullJson: String, layer1Json: String): String {
+    fun upload(context: Context, stamp: String, fullJson: String, layer1Json: String, sourceTag: String = "AUTO"): String {
         val token = loadToken(context) ?: return "失敗：GitHub Token 未設定"
         val settings = context.getSharedPreferences("settings", 0)
         val owner = settings.getString("github_owner", "antharas730203").orEmpty().trim()
@@ -31,6 +31,7 @@ object DataArchiveUploader {
         val branch = settings.getString("github_branch", "main").orEmpty().trim().ifEmpty { "main" }
         if (owner.isBlank() || repo.isBlank()) return "失敗：GitHub Repo 未設定"
 
+        val tag = if (sourceTag.equals("MANUAL", true)) "MANUAL" else "AUTO"
         return try {
             val root = JSONObject(fullJson)
             val stocks = root.optJSONArray("stocks") ?: JSONArray()
@@ -45,15 +46,16 @@ object DataArchiveUploader {
             val twseText = marketJson(stamp, "TWSE", twse)
             val tpexText = marketJson(stamp, "TPEX", tpex)
             val layer1Text = addReadMarkers(layer1Json)
-            val twsePath = "scanner_data/history/${stamp}_TWSE.json"
-            val tpexPath = "scanner_data/history/${stamp}_TPEX.json"
-            val layer1Path = "scanner_data/history/${stamp}_LAYER1.json"
+            val basePath = "scanner_data/history"
+            val twsePath = "$basePath/${stamp}_${tag}_TWSE.json"
+            val tpexPath = "$basePath/${stamp}_${tag}_TPEX.json"
+            val layer1Path = "$basePath/${stamp}_${tag}_LAYER1.json"
 
-            putFile(token, owner, repo, branch, twsePath, twseText, "Add TWSE archive $stamp")
-            putFile(token, owner, repo, branch, tpexPath, tpexText, "Add TPEX archive $stamp")
-            putFile(token, owner, repo, branch, layer1Path, layer1Text, "Add LAYER1 archive $stamp")
+            putFile(token, owner, repo, branch, twsePath, twseText, "Add $tag TWSE archive $stamp")
+            putFile(token, owner, repo, branch, tpexPath, tpexText, "Add $tag TPEX archive $stamp")
+            putFile(token, owner, repo, branch, layer1Path, layer1Text, "Add $tag LAYER1 archive $stamp")
 
-            "成功：TWSE/TPEX/LAYER1｜$stamp"
+            "成功：TWSE/TPEX/LAYER1｜$tag｜$stamp"
         } catch (e: Exception) {
             "失敗：Archive ${e.javaClass.simpleName} - ${e.message ?: "無詳細訊息"}"
         }
@@ -115,7 +117,7 @@ object DataArchiveUploader {
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
             setRequestProperty("Content-Type", "application/json; charset=utf-8")
-            setRequestProperty("User-Agent", "TaiwanV2Scanner/0.8.2")
+            setRequestProperty("User-Agent", "TaiwanV2Scanner/0.8.3")
         }
         conn.outputStream.use { it.write(payload.toString().toByteArray(Charsets.UTF_8)) }
         val code = conn.responseCode
@@ -126,14 +128,14 @@ object DataArchiveUploader {
 
     private fun getSha(token: String, owner: String, repo: String, branch: String, path: String): String? {
         val encodedPath = path.split('/').joinToString("/") { URLEncoder.encode(it, "UTF-8").replace("+", "%20") }
-        val conn = (URL("$API/repos/$owner/$repo/contents/$encodedPath?ref=${URLEncoder.encode(branch, "UTF-8")}").openConnection() as HttpURLConnection).apply {
+        val conn = (URL("$API/repos/$owner/$repo/contents/$encodedPath?ref=${URLEncoder.encode(branch, "UTF-8')}").openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 8000
             readTimeout = 12000
             setRequestProperty("Authorization", "Bearer $token")
             setRequestProperty("Accept", "application/vnd.github+json")
             setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-            setRequestProperty("User-Agent", "TaiwanV2Scanner/0.8.2")
+            setRequestProperty("User-Agent", "TaiwanV2Scanner/0.8.3")
         }
         return try {
             when (val code = conn.responseCode) {
