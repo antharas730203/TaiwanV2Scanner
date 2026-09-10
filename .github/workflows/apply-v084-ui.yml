@@ -6,7 +6,6 @@ on:
 
 jobs:
   patch:
-    if: ${{ !contains(github.event.head_commit.message, 'Apply V0.8.4 UI patch') }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -14,6 +13,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Skip patch commit
+        run: |
+          if git log -1 --pretty=%B | grep -q 'Apply V0.8.4 UI patch'; then
+            echo 'Patch commit already applied; nothing to do.'
+            exit 0
+          fi
 
       - name: Apply narrow UI/version patch
         run: |
