@@ -4,7 +4,10 @@ import android.content.Context
 import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
+import java.net.ConnectException
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.net.URLEncoder
 import java.net.URL
 import java.security.KeyStore
@@ -22,6 +25,7 @@ object DataArchiveUploader {
     private const val PREFS = "github_secure"
     private const val TOKEN_KEY = "token"
     private const val ALIAS = "TaiwanV2ScannerGitHubKey"
+    private const val MAX_TRANSIENT_RETRIES = 3
 
     fun upload(context: Context, stamp: String, fullJson: String, layer1Json: String, sourceTag: String = "AUTO"): String {
         val token = loadToken(context) ?: return "失敗：GitHub Token 未設定"
@@ -32,33 +36,55 @@ object DataArchiveUploader {
         if (owner.isBlank() || repo.isBlank()) return "失敗：GitHub Repo 未設定"
 
         val tag = if (sourceTag.equals("MANUAL", true)) "MANUAL" else "AUTO"
-        return try {
-            val root = JSONObject(fullJson)
-            val stocks = root.optJSONArray("stocks") ?: JSONArray()
-            val twse = JSONArray()
-            val tpex = JSONArray()
-            for (i in 0 until stocks.length()) {
-                val stock = stocks.optJSONObject(i) ?: continue
-                val marked = JSONObject(stock.toString()).apply { put("_read_index", "STOCK_START") }
-                if (stock.optString("market").equals("TPEX", true)) tpex.put(marked) else twse.put(marked)
+        var lastTransient: Exception? = null
+        for (attempt in 0..MAX_TRANSIENT_RETRIES) {
+            try {
+                val root = JSONObject(fullJson)
+                val stocks = root.optJSONArray("stocks") ?: JSONArray()
+                val twse = JSONArray()
+                val tpex = JSONArray()
+                for (i in 0 until stocks.length()) {
+                    val stock = stocks.optJSONObject(i) ?: continue
+                    val marked = JSONObject(stock.toString()).apply { put("_read_index", "STOCK_START") }
+                    if (stock.optString("market").equals("TPEX", true)) tpex.put(marked) else twse.put(marked)
+                }
+
+                val twseText = marketJson(stamp, "TWSE", twse)
+                val tpexText = marketJson(stamp, "TPEX", tpex)
+                val layer1Text = addReadMarkers(layer1Json)
+                val basePath = "scanner_data/history"
+                val twsePath = "$basePath/${stamp}_${tag}_TWSE.json"
+                val tpexPath = "$basePath/${stamp}_${tag}_TPEX.json"
+                val layer1Path = "$basePath/${stamp}_${tag}_LAYER1.json"
+
+                putFile(token, owner, repo, branch, twsePath, twseText, "Add $tag TWSE archive $stamp")
+                putFile(token, owner, repo, branch, tpexPath, tpexText, "Add $tag TPEX archive $stamp")
+                putFile(token, owner, repo, branch, layer1Path, layer1Text, "Add $tag LAYER1 archive $stamp")
+
+                return "成功：TWSE/TPEX/LAYER1｜$tag｜$stamp"
+            } catch (e: Exception) {
+                if (!isTransientNetworkError(e) || attempt >= MAX_TRANSIENT_RETRIES) {
+                    return "失敗：Archive ${e.javaClass.simpleName} - ${e.message ?: "無詳細訊息"}"
+                }
+                lastTransient = e
+                val waitMs = when (attempt) {
+                    0 -> 5000L
+                    1 -> 15000L
+                    else -> 30000L
+                }
+                Thread.sleep(waitMs)
             }
-
-            val twseText = marketJson(stamp, "TWSE", twse)
-            val tpexText = marketJson(stamp, "TPEX", tpex)
-            val layer1Text = addReadMarkers(layer1Json)
-            val basePath = "scanner_data/history"
-            val twsePath = "$basePath/${stamp}_${tag}_TWSE.json"
-            val tpexPath = "$basePath/${stamp}_${tag}_TPEX.json"
-            val layer1Path = "$basePath/${stamp}_${tag}_LAYER1.json"
-
-            putFile(token, owner, repo, branch, twsePath, twseText, "Add $tag TWSE archive $stamp")
-            putFile(token, owner, repo, branch, tpexPath, tpexText, "Add $tag TPEX archive $stamp")
-            putFile(token, owner, repo, branch, layer1Path, layer1Text, "Add $tag LAYER1 archive $stamp")
-
-            "成功：TWSE/TPEX/LAYER1｜$tag｜$stamp"
-        } catch (e: Exception) {
-            "失敗：Archive ${e.javaClass.simpleName} - ${e.message ?: "無詳細訊息"}"
         }
+        return "失敗：Archive ${lastTransient?.javaClass?.simpleName ?: "NetworkError"} - ${lastTransient?.message ?: "網路連線失敗"}"
+    }
+
+    private fun isTransientNetworkError(e: Exception): Boolean {
+        var current: Throwable? = e
+        while (current != null) {
+            if (current is UnknownHostException || current is ConnectException || current is SocketTimeoutException) return true
+            current = current.cause
+        }
+        return false
     }
 
     private fun marketJson(stamp: String, market: String, stocks: JSONArray): String = JSONObject().apply {
