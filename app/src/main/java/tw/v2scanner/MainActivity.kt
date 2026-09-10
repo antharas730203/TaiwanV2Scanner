@@ -2,6 +2,8 @@ package tw.v2scanner
 
 import android.app.Activity
 import android.graphics.Color
+import android.graphics.Rect
+import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.os.Bundle
 import android.provider.Settings
@@ -146,7 +148,7 @@ class MainActivity : Activity() {
         top.addView(roundButton("←", 52, false).apply {
             contentDescription = "關閉選單"
             setOnClickListener { toggleDrawer(false) }
-        }, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.END))
+        }, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.START))
         panel.addView(top)
 
         panel.addView(sectionHeader("GitHub 設定"), actionParams(12))
@@ -230,7 +232,7 @@ class MainActivity : Activity() {
             setPadding(0, dp(8), 0, dp(12))
         }
         aboutBox.addView(TextView(this).apply {
-            text = "V0.8.3"
+            text = "V0.8.4"
             textSize = 18f
             setTextColor(Color.WHITE)
         })
@@ -243,12 +245,43 @@ class MainActivity : Activity() {
         panel.addView(aboutBox)
         attachExpandable(panel, aboutBox)
 
-        return ScrollView(this).apply {
-            isVerticalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
+        val scroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = true
+            scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
+            setScrollbarFadingEnabled(true)
+            scrollBarFadeDuration = 180
+            scrollBarDefaultDelayBeforeFade = 500
+            setScrollBarSize(dp(4))
             setFillViewport(true)
+            overScrollMode = View.OVER_SCROLL_NEVER
             addView(panel)
         }
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            scroll.setVerticalScrollbarThumbDrawable(ColorDrawable(Color.rgb(24, 24, 24)))
+            scroll.setVerticalScrollbarTrackDrawable(ColorDrawable(Color.TRANSPARENT))
+        }
+        fun ensureScheduleFieldVisible() {
+            scroll.post {
+                val rect=Rect()
+                scheduleTimes.getDrawingRect(rect)
+                scroll.offsetDescendantRectToMyCoords(scheduleTimes,rect)
+                val visibleBottom=scroll.height-scroll.paddingBottom-dp(16)
+                val delta=rect.bottom-visibleBottom
+                if(delta>0) scroll.smoothScrollBy(0,delta)
+            }
+        }
+        scheduleTimes.setOnFocusChangeListener { _,hasFocus -> if(hasFocus) ensureScheduleFieldVisible() }
+        scroll.viewTreeObserver.addOnGlobalLayoutListener {
+            val visible=Rect()
+            scroll.getWindowVisibleDisplayFrame(visible)
+            val keyboardHeight=(scroll.rootView.height-visible.bottom).coerceAtLeast(0)
+            val extraBottom=if(keyboardHeight>dp(100)) keyboardHeight else 0
+            if(scroll.paddingBottom!=extraBottom){
+                scroll.setPadding(scroll.paddingLeft,scroll.paddingTop,scroll.paddingRight,extraBottom)
+                if(scheduleTimes.hasFocus()) ensureScheduleFieldVisible()
+            }
+        }
+        return scroll
     }
 
     private fun sectionHeader(textValue: String): LinearLayout = LinearLayout(this).apply {
@@ -340,7 +373,7 @@ class MainActivity : Activity() {
                 setRequestProperty("Authorization", "Bearer $token")
                 setRequestProperty("Accept", "application/vnd.github+json")
                 setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.8.3")
+                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.8.4")
             }
             val code = conn.responseCode
             val body = try {
