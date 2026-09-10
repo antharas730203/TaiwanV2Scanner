@@ -23,6 +23,10 @@ object BatchExporter {
         val dir = File(baseDir, "scanner_data/history")
         check(dir.exists() || dir.mkdirs()) { "無法建立資料資料夾：${dir.absolutePath}" }
 
+        val prefs = context.getSharedPreferences("settings", 0)
+        val scanOrigin = prefs.getString("scan_origin", "manual") ?: "manual"
+        val sourceTag = if (scanOrigin == "scheduled") "AUTO" else "MANUAL"
+
         val twse = JSONArray()
         val tpex = JSONArray()
         val records = ArrayList<StockRecord>(stocks.length())
@@ -42,9 +46,9 @@ object BatchExporter {
         val tpexText = marketJson(stamp, "TPEX", tpex)
         val layer1Text = addReadMarkers(layer1Json)
 
-        val twseFile = File(dir, "${stamp}_TWSE.json")
-        val tpexFile = File(dir, "${stamp}_TPEX.json")
-        val layer1File = File(dir, "${stamp}_LAYER1.json")
+        val twseFile = File(dir, "${stamp}_${sourceTag}_TWSE.json")
+        val tpexFile = File(dir, "${stamp}_${sourceTag}_TPEX.json")
+        val layer1File = File(dir, "${stamp}_${sourceTag}_LAYER1.json")
 
         twseFile.writeText(twseText, Charsets.UTF_8)
         tpexFile.writeText(tpexText, Charsets.UTF_8)
@@ -54,6 +58,7 @@ object BatchExporter {
         // GitHub reader because the read marker lives inside each data file.
         val manifest = JSONObject().apply {
             put("scan_time", stamp)
+            put("source", sourceTag)
             put("read_unit", CHAR_LIMIT)
             put("files", JSONArray().apply {
                 put(fileInfo(twseFile, twseText))
@@ -61,14 +66,14 @@ object BatchExporter {
                 put(fileInfo(layer1File, layer1Text))
             })
         }
-        File(dir, "${stamp}_MANIFEST.json").writeText(manifest.toString(), Charsets.UTF_8)
+        File(dir, "${stamp}_${sourceTag}_MANIFEST.json").writeText(manifest.toString(), Charsets.UTF_8)
 
         val layer1Count = JSONObject(layer1Json).optInt("qualified_count", 0)
         context.getSharedPreferences("diagnostics", 0).edit()
             .putString("layer1_status", "LAYER1_COMPLETE")
             .putInt("layer1_count", layer1Count)
             .putInt("layer1_source_records", records.size)
-            .putString("archive_local", "成功：TWSE/TPEX/LAYER1｜$stamp")
+            .putString("archive_local", "成功：TWSE/TPEX/LAYER1｜$sourceTag｜$stamp")
             .apply()
 
         // Keep the latest Layer1 result for the manual "上傳最新 JSON" action.
@@ -76,11 +81,9 @@ object BatchExporter {
 
         // GitHub archive upload is schedule-only.
         // Manual scans never upload implicitly; use the "上傳最新 JSON" button instead.
-        val prefs = context.getSharedPreferences("settings", 0)
-        val scanOrigin = prefs.getString("scan_origin", "manual") ?: "manual"
         val scheduleUpload = prefs.getBoolean("schedule_github_upload", false)
         val archiveResult = if (scanOrigin == "scheduled" && scheduleUpload) {
-            DataArchiveUploader.upload(context, stamp, fullJson, layer1Text)
+            DataArchiveUploader.upload(context, stamp, fullJson, layer1Text, "AUTO")
         } else {
             "未自動上傳（手動掃描或排程自動上傳未啟用）"
         }
