@@ -9,12 +9,18 @@ permissions:
 
 jobs:
   repair:
-    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Skip bot follow-up commit
+        run: |
+          if [ "${GITHUB_ACTOR}" = "github-actions[bot]" ]; then
+            echo 'Skipping bot-generated follow-up commit.'
+            exit 0
+          fi
 
       - name: Apply V0.8.4 UI patch
         run: |
@@ -25,7 +31,9 @@ jobs:
           main = Path('app/src/main/java/tw/v2scanner/MainActivity.kt')
           s = main.read_text(encoding='utf-8')
 
-          if 'versionCode = 20' in Path('app/build.gradle.kts').read_text(encoding='utf-8'):
+          gradle = Path('app/build.gradle.kts')
+          g = gradle.read_text(encoding='utf-8')
+          if 'versionCode = 20' in g:
               print('V0.8.4 already applied; no source patch needed.')
               raise SystemExit(0)
 
@@ -93,8 +101,6 @@ jobs:
           s = s.replace('TaiwanV2Scanner/0.8.3', 'TaiwanV2Scanner/0.8.4')
           main.write_text(s, encoding='utf-8')
 
-          gradle = Path('app/build.gradle.kts')
-          g = gradle.read_text(encoding='utf-8')
           assert 'versionCode = 19' in g and 'versionName = "0.8.3"' in g
           g = g.replace('versionCode = 19', 'versionCode = 20', 1)
           g = g.replace('versionName = "0.8.3"', 'versionName = "0.8.4"', 1)
