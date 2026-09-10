@@ -128,7 +128,7 @@ object DataArchiveUploader {
 
     private fun getSha(token: String, owner: String, repo: String, branch: String, path: String): String? {
         val encodedPath = path.split('/').joinToString("/") { URLEncoder.encode(it, "UTF-8").replace("+", "%20") }
-        val conn = (URL("$API/repos/$owner/$repo/contents/$encodedPath?ref=${URLEncoder.encode(branch, "UTF-8')}").openConnection() as HttpURLConnection).apply {
+        val conn = (URL("$API/repos/$owner/$repo/contents/$encodedPath?ref=${URLEncoder.encode(branch, "UTF-8")}").openConnection() as HttpURLConnection).apply {
             requestMethod = "GET"
             connectTimeout = 8000
             readTimeout = 12000
