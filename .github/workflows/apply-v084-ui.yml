@@ -1,0 +1,106 @@
+name: Apply V0.8.4 UI Patch
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, 'Apply V0.8.4 UI patch') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Apply narrow UI/version patch
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          main = Path('app/src/main/java/tw/v2scanner/MainActivity.kt')
+          s = main.read_text(encoding='utf-8')
+
+          s = s.replace('import android.graphics.Color\n', 'import android.graphics.Color\nimport android.graphics.Rect\nimport android.graphics.drawable.ColorDrawable\n')
+
+          old = 'FrameLayout.LayoutParams(dp(52), dp(52), Gravity.END))'
+          new = 'FrameLayout.LayoutParams(dp(52), dp(52), Gravity.START))'
+          assert old in s, 'drawer back button target not found'
+          s = s.replace(old, new, 1)
+
+          old = '''        return ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            setFillViewport(true)
+            addView(panel)
+        }
+'''
+          new = '''        val scroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = true
+            scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
+            setScrollbarFadingEnabled(true)
+            scrollBarFadeDuration = 180
+            scrollBarDefaultDelayBeforeFade = 500
+            setScrollBarSize(dp(4))
+            setFillViewport(true)
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(panel)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            scroll.setVerticalScrollbarThumbDrawable(ColorDrawable(Color.rgb(24, 24, 24)))
+            scroll.setVerticalScrollbarTrackDrawable(ColorDrawable(Color.TRANSPARENT))
+        }
+
+        fun ensureScheduleFieldVisible() {
+            scroll.post {
+                val rect = Rect()
+                scheduleTimes.getDrawingRect(rect)
+                scroll.offsetDescendantRectToMyCoords(scheduleTimes, rect)
+                val visibleBottom = scroll.height - scroll.paddingBottom - dp(16)
+                val delta = rect.bottom - visibleBottom
+                if (delta > 0) scroll.smoothScrollBy(0, delta)
+            }
+        }
+
+        scheduleTimes.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) ensureScheduleFieldVisible()
+        }
+
+        scroll.viewTreeObserver.addOnGlobalLayoutListener {
+            val visible = Rect()
+            scroll.getWindowVisibleDisplayFrame(visible)
+            val keyboardHeight = (scroll.rootView.height - visible.bottom).coerceAtLeast(0)
+            val extraBottom = if (keyboardHeight > dp(100)) keyboardHeight else 0
+            if (scroll.paddingBottom != extraBottom) {
+                scroll.setPadding(scroll.paddingLeft, scroll.paddingTop, scroll.paddingRight, extraBottom)
+                if (scheduleTimes.hasFocus()) ensureScheduleFieldVisible()
+            }
+        }
+        return scroll
+'''
+          assert old in s, 'drawer ScrollView block not found'
+          s = s.replace(old, new, 1)
+
+          s = s.replace('text = "V0.8.3"', 'text = "V0.8.4"', 1)
+          s = s.replace('TaiwanV2Scanner/0.8.3', 'TaiwanV2Scanner/0.8.4')
+
+          main.write_text(s, encoding='utf-8')
+
+          gradle = Path('app/build.gradle.kts')
+          g = gradle.read_text(encoding='utf-8')
+          assert 'versionCode = 19' in g and 'versionName = "0.8.3"' in g
+          g = g.replace('versionCode = 19', 'versionCode = 20', 1)
+          g = g.replace('versionName = "0.8.3"', 'versionName = "0.8.4"', 1)
+          gradle.write_text(g, encoding='utf-8')
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/tw/v2scanner/MainActivity.kt app/build.gradle.kts
+          git diff --cached --check
+          git commit -m "Apply V0.8.4 UI patch"
+          git push
