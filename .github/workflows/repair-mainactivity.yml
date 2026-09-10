@@ -15,44 +15,96 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Fix drawer scrolling without replacing current UI
+
+      - name: Apply V0.8.4 UI patch
         run: |
           set -euo pipefail
-          sed -i 's/^[[:space:]]*fillViewport = true$/            setFillViewport(true)/' app/src/main/java/tw/v2scanner/MainActivity.kt
           python3 - <<'PY'
           from pathlib import Path
-          p = Path('app/src/main/java/tw/v2scanner/MainActivity.kt')
-          s = p.read_text(encoding='utf-8')
-          s = s.replace('import android.graphics.Color\n', 'import android.graphics.Color\nimport android.graphics.Rect\n')
-          s = s.replace('    private lateinit var drawer: View\n', '    private lateinit var drawer: View\n    private var drawerScroll: ScrollView? = null\n')
-          s = s.replace('        scheduleBox.addView(scheduleTimes, editParams())\n', '''        scheduleBox.addView(scheduleTimes, editParams())
-        scheduleTimes.setOnFocusChangeListener { view, hasFocus ->
-            if (hasFocus) {
-                view.postDelayed({
-                    drawerScroll?.requestChildRectangleOnScreen(
-                        view,
-                        Rect(0, 0, view.width, view.height),
-                        true
-                    )
-                }, 250)
+
+          main = Path('app/src/main/java/tw/v2scanner/MainActivity.kt')
+          s = main.read_text(encoding='utf-8')
+
+          if 'versionCode = 20' in Path('app/build.gradle.kts').read_text(encoding='utf-8'):
+              print('V0.8.4 already applied; no source patch needed.')
+              raise SystemExit(0)
+
+          s = s.replace('import android.graphics.Color\n', 'import android.graphics.Color\nimport android.graphics.Rect\nimport android.graphics.drawable.ColorDrawable\n', 1)
+
+          old = 'FrameLayout.LayoutParams(dp(52), dp(52), Gravity.END))'
+          new = 'FrameLayout.LayoutParams(dp(52), dp(52), Gravity.START))'
+          assert old in s, 'drawer back button target not found'
+          s = s.replace(old, new, 1)
+
+          old = '''        return ScrollView(this).apply {
+            isVerticalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+            setFillViewport(true)
+            addView(panel)
+        }
+'''
+          new = '''        val scroll = ScrollView(this).apply {
+            isVerticalScrollBarEnabled = true
+            scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
+            setScrollbarFadingEnabled(true)
+            scrollBarFadeDuration = 180
+            scrollBarDefaultDelayBeforeFade = 500
+            setScrollBarSize(dp(4))
+            setFillViewport(true)
+            overScrollMode = View.OVER_SCROLL_NEVER
+            addView(panel)
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            scroll.setVerticalScrollbarThumbDrawable(ColorDrawable(Color.rgb(24, 24, 24)))
+            scroll.setVerticalScrollbarTrackDrawable(ColorDrawable(Color.TRANSPARENT))
+        }
+
+        fun ensureScheduleFieldVisible() {
+            scroll.post {
+                val rect = Rect()
+                scheduleTimes.getDrawingRect(rect)
+                scroll.offsetDescendantRectToMyCoords(scheduleTimes, rect)
+                val visibleBottom = scroll.height - scroll.paddingBottom - dp(16)
+                val delta = rect.bottom - visibleBottom
+                if (delta > 0) scroll.smoothScrollBy(0, delta)
             }
         }
-        scheduleTimes.setOnClickListener {
-            it.postDelayed({
-                drawerScroll?.requestChildRectangleOnScreen(
-                    it,
-                    Rect(0, 0, it.width, it.height),
-                    true
-                )
-            }, 150)
+
+        scheduleTimes.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus) ensureScheduleFieldVisible()
         }
-''')
-          s = s.replace('        return ScrollView(this).apply {\n            isVerticalScrollBarEnabled = false\n', '        return ScrollView(this).apply {\n            drawerScroll = this\n            isVerticalScrollBarEnabled = false\n')
-          p.write_text(s, encoding='utf-8')
+
+        scroll.viewTreeObserver.addOnGlobalLayoutListener {
+            val visible = Rect()
+            scroll.getWindowVisibleDisplayFrame(visible)
+            val keyboardHeight = (scroll.rootView.height - visible.bottom).coerceAtLeast(0)
+            val extraBottom = if (keyboardHeight > dp(100)) keyboardHeight else 0
+            if (scroll.paddingBottom != extraBottom) {
+                scroll.setPadding(scroll.paddingLeft, scroll.paddingTop, scroll.paddingRight, extraBottom)
+                if (scheduleTimes.hasFocus()) ensureScheduleFieldVisible()
+            }
+        }
+        return scroll
+'''
+          assert old in s, 'drawer ScrollView block not found'
+          s = s.replace(old, new, 1)
+
+          s = s.replace('text = "V0.8.3"', 'text = "V0.8.4"', 1)
+          s = s.replace('TaiwanV2Scanner/0.8.3', 'TaiwanV2Scanner/0.8.4')
+          main.write_text(s, encoding='utf-8')
+
+          gradle = Path('app/build.gradle.kts')
+          g = gradle.read_text(encoding='utf-8')
+          assert 'versionCode = 19' in g and 'versionName = "0.8.3"' in g
+          g = g.replace('versionCode = 19', 'versionCode = 20', 1)
+          g = g.replace('versionName = "0.8.3"', 'versionName = "0.8.4"', 1)
+          gradle.write_text(g, encoding='utf-8')
           PY
+
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add app/src/main/java/tw/v2scanner/MainActivity.kt
+          git add app/src/main/java/tw/v2scanner/MainActivity.kt app/build.gradle.kts
+          git diff --cached --check
           git diff --cached --quiet && exit 0
-          git commit -m 'Fix drawer scrolling when keyboard is open'
+          git commit -m 'Apply V0.8.4 UI patch'
           git push origin HEAD:main
