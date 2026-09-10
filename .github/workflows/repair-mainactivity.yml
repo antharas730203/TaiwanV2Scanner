@@ -15,10 +15,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Restore MainActivity and fix drawer scrolling
+      - name: Fix drawer scrolling without replacing current UI
         run: |
           set -euo pipefail
-          git checkout 69cba9ffd782a1e578f243a2c4fa5e4d8913203a -- app/src/main/java/tw/v2scanner/MainActivity.kt
           sed -i 's/^[[:space:]]*fillViewport = true$/            setFillViewport(true)/' app/src/main/java/tw/v2scanner/MainActivity.kt
           python3 - <<'PY'
           from pathlib import Path
