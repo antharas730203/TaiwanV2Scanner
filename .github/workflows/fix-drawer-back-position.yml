@@ -1,0 +1,36 @@
+name: Fix drawer back position
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/fix-drawer-back-position.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Move drawer back button to left
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/tw/v2scanner/MainActivity.kt')
+          s = p.read_text(encoding='utf-8')
+          old = 'FrameLayout.LayoutParams(dp(52), dp(52), Gravity.END)'
+          new = 'FrameLayout.LayoutParams(dp(52), dp(52), Gravity.START)'
+          if old not in s:
+              raise SystemExit('target layout line not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit and push
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add app/src/main/java/tw/v2scanner/MainActivity.kt
+          git commit -m 'Fix drawer back button position'
+          git push
