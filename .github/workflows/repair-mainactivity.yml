@@ -1,116 +1,44 @@
 name: Repair MainActivity
-
-on:
-  push:
-    branches: ["main"]
-
-permissions:
-  contents: write
+on: push
 
 jobs:
   repair:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Skip bot follow-up commit
+      - name: Patch V0.8.4 UI
+        env:
+          GH_ACTOR: ${{ github.actor }}
         run: |
-          if [ "${GITHUB_ACTOR}" = "github-actions[bot]" ]; then
-            echo 'Skipping bot-generated follow-up commit.'
-            exit 0
-          fi
-
-      - name: Apply V0.8.4 UI patch
-        run: |
-          set -euo pipefail
+          set -e
+          if [ "$GH_ACTOR" = "github-actions[bot]" ]; then exit 0; fi
           python3 - <<'PY'
           from pathlib import Path
-
-          main = Path('app/src/main/java/tw/v2scanner/MainActivity.kt')
-          s = main.read_text(encoding='utf-8')
-
-          gradle = Path('app/build.gradle.kts')
-          g = gradle.read_text(encoding='utf-8')
-          if 'versionCode = 20' in g:
-              print('V0.8.4 already applied; no source patch needed.')
-              raise SystemExit(0)
-
-          s = s.replace('import android.graphics.Color\n', 'import android.graphics.Color\nimport android.graphics.Rect\nimport android.graphics.drawable.ColorDrawable\n', 1)
-
-          old = 'FrameLayout.LayoutParams(dp(52), dp(52), Gravity.END))'
-          new = 'FrameLayout.LayoutParams(dp(52), dp(52), Gravity.START))'
-          assert old in s, 'drawer back button target not found'
-          s = s.replace(old, new, 1)
-
-          old = '''        return ScrollView(this).apply {
-            isVerticalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-            setFillViewport(true)
-            addView(panel)
-        }
-'''
-          new = '''        val scroll = ScrollView(this).apply {
-            isVerticalScrollBarEnabled = true
-            scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
-            setScrollbarFadingEnabled(true)
-            scrollBarFadeDuration = 180
-            scrollBarDefaultDelayBeforeFade = 500
-            setScrollBarSize(dp(4))
-            setFillViewport(true)
-            overScrollMode = View.OVER_SCROLL_NEVER
-            addView(panel)
-        }
-        if (android.os.Build.VERSION.SDK_INT >= 29) {
-            scroll.setVerticalScrollbarThumbDrawable(ColorDrawable(Color.rgb(24, 24, 24)))
-            scroll.setVerticalScrollbarTrackDrawable(ColorDrawable(Color.TRANSPARENT))
-        }
-
-        fun ensureScheduleFieldVisible() {
-            scroll.post {
-                val rect = Rect()
-                scheduleTimes.getDrawingRect(rect)
-                scroll.offsetDescendantRectToMyCoords(scheduleTimes, rect)
-                val visibleBottom = scroll.height - scroll.paddingBottom - dp(16)
-                val delta = rect.bottom - visibleBottom
-                if (delta > 0) scroll.smoothScrollBy(0, delta)
-            }
-        }
-
-        scheduleTimes.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus) ensureScheduleFieldVisible()
-        }
-
-        scroll.viewTreeObserver.addOnGlobalLayoutListener {
-            val visible = Rect()
-            scroll.getWindowVisibleDisplayFrame(visible)
-            val keyboardHeight = (scroll.rootView.height - visible.bottom).coerceAtLeast(0)
-            val extraBottom = if (keyboardHeight > dp(100)) keyboardHeight else 0
-            if (scroll.paddingBottom != extraBottom) {
-                scroll.setPadding(scroll.paddingLeft, scroll.paddingTop, scroll.paddingRight, extraBottom)
-                if (scheduleTimes.hasFocus()) ensureScheduleFieldVisible()
-            }
-        }
-        return scroll
-'''
-          assert old in s, 'drawer ScrollView block not found'
-          s = s.replace(old, new, 1)
-
-          s = s.replace('text = "V0.8.3"', 'text = "V0.8.4"', 1)
-          s = s.replace('TaiwanV2Scanner/0.8.3', 'TaiwanV2Scanner/0.8.4')
-          main.write_text(s, encoding='utf-8')
-
+          main=Path('app/src/main/java/tw/v2scanner/MainActivity.kt')
+          s=main.read_text()
+          gpath=Path('app/build.gradle.kts')
+          g=gpath.read_text()
+          if 'versionCode = 20' in g: raise SystemExit(0)
+          s=s.replace('import android.graphics.Color\n','import android.graphics.Color\nimport android.graphics.Rect\nimport android.graphics.drawable.ColorDrawable\n',1)
+          s=s.replace('FrameLayout.LayoutParams(dp(52), dp(52), Gravity.END))','FrameLayout.LayoutParams(dp(52), dp(52), Gravity.START))',1)
+          old='''        return ScrollView(this).apply {\n            isVerticalScrollBarEnabled = false\n            overScrollMode = View.OVER_SCROLL_NEVER\n            setFillViewport(true)\n            addView(panel)\n        }\n'''
+          new='''        val scroll = ScrollView(this).apply {\n            isVerticalScrollBarEnabled = true\n            scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY\n            setScrollbarFadingEnabled(true)\n            scrollBarFadeDuration = 180\n            scrollBarDefaultDelayBeforeFade = 500\n            setScrollBarSize(dp(4))\n            setFillViewport(true)\n            overScrollMode = View.OVER_SCROLL_NEVER\n            addView(panel)\n        }\n        if (android.os.Build.VERSION.SDK_INT >= 29) {\n            scroll.setVerticalScrollbarThumbDrawable(ColorDrawable(Color.rgb(24, 24, 24)))\n            scroll.setVerticalScrollbarTrackDrawable(ColorDrawable(Color.TRANSPARENT))\n        }\n        fun ensureScheduleFieldVisible() {\n            scroll.post {\n                val rect=Rect()\n                scheduleTimes.getDrawingRect(rect)\n                scroll.offsetDescendantRectToMyCoords(scheduleTimes,rect)\n                val visibleBottom=scroll.height-scroll.paddingBottom-dp(16)\n                val delta=rect.bottom-visibleBottom\n                if(delta>0) scroll.smoothScrollBy(0,delta)\n            }\n        }\n        scheduleTimes.setOnFocusChangeListener { _,hasFocus -> if(hasFocus) ensureScheduleFieldVisible() }\n        scroll.viewTreeObserver.addOnGlobalLayoutListener {\n            val visible=Rect()\n            scroll.getWindowVisibleDisplayFrame(visible)\n            val keyboardHeight=(scroll.rootView.height-visible.bottom).coerceAtLeast(0)\n            val extraBottom=if(keyboardHeight>dp(100)) keyboardHeight else 0\n            if(scroll.paddingBottom!=extraBottom){\n                scroll.setPadding(scroll.paddingLeft,scroll.paddingTop,scroll.paddingRight,extraBottom)\n                if(scheduleTimes.hasFocus()) ensureScheduleFieldVisible()\n            }\n        }\n        return scroll\n'''
+          assert old in s
+          s=s.replace(old,new,1)
+          s=s.replace('text = "V0.8.3"','text = "V0.8.4"',1)
+          s=s.replace('TaiwanV2Scanner/0.8.3','TaiwanV2Scanner/0.8.4')
+          main.write_text(s)
           assert 'versionCode = 19' in g and 'versionName = "0.8.3"' in g
-          g = g.replace('versionCode = 19', 'versionCode = 20', 1)
-          g = g.replace('versionName = "0.8.3"', 'versionName = "0.8.4"', 1)
-          gradle.write_text(g, encoding='utf-8')
+          g=g.replace('versionCode = 19','versionCode = 20',1).replace('versionName = "0.8.3"','versionName = "0.8.4"',1)
+          gpath.write_text(g)
           PY
-
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add app/src/main/java/tw/v2scanner/MainActivity.kt app/build.gradle.kts
           git diff --cached --check
-          git diff --cached --quiet && exit 0
           git commit -m 'Apply V0.8.4 UI patch'
-          git push origin HEAD:main
+          git push
