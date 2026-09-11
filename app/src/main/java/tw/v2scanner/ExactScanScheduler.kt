@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.work.Constraints
+import androidx.work.Data
 import androidx.work.ExistingWorkPolicy
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
@@ -94,15 +95,20 @@ class ExactScanAlarmReceiver : BroadcastReceiver() {
         val index = intent?.getIntExtra("schedule_index", -1) ?: -1
         val hour = intent?.getIntExtra("hour", -1) ?: -1
         val minute = intent?.getIntExtra("minute", -1) ?: -1
+        val network = NetworkState.summary(context)
 
         ScheduleDiagnostics.mark(context, "last_schedule_trigger")
         ScheduleDiagnostics.mark(context, "last_schedule_engine", "EXACT_ALARM")
         ScheduleDiagnostics.mark(context, "last_schedule_index", index.toString())
-        ScheduleDiagnostics.mark(context, "last_schedule_network", NetworkState.summary(context))
+        ScheduleDiagnostics.mark(context, "last_schedule_network", network)
 
         val prefs = context.getSharedPreferences("settings", 0)
+        val mode = prefs.getString("schedule_mode", "trading") ?: "trading"
+        val historyId = if (index >= 0 && hour in 0..23 && minute in 0..59) {
+            ScheduleDiagnosticsHistory.start(context, index, hour, minute, network, mode)
+        } else null
+
         if (prefs.getBoolean("auto", false)) {
-            val mode = prefs.getString("schedule_mode", "trading") ?: "trading"
             ScheduleDiagnostics.mark(context, "last_schedule_mode", mode)
             if (mode == "trading") {
                 val marketStatus = MarketStatus.check()
@@ -111,12 +117,20 @@ class ExactScanAlarmReceiver : BroadcastReceiver() {
                 ScheduleDiagnostics.mark(context, "last_market_status_sample", marketStatus.sampleReturned.toString())
                 if (!marketStatus.ok) {
                     ScheduleDiagnostics.mark(context, "last_schedule_skip", marketStatus.reason)
+                    historyId?.let {
+                        ScheduleDiagnosticsHistory.update(context, it, "SKIPPED", "market_status", marketStatus.reason)
+                        ScheduleDiagnosticsHistory.update(context, it, key = "api_sample", value = marketStatus.sampleReturned.toString())
+                    }
                 } else {
-                    enqueueScan(context)
+                    historyId?.let { ScheduleDiagnosticsHistory.update(context, it, "QUEUED", "market_status", marketStatus.reason) }
+                    enqueueScan(context, historyId)
                 }
             } else {
-                enqueueScan(context)
+                historyId?.let { ScheduleDiagnosticsHistory.update(context, it, "QUEUED") }
+                enqueueScan(context, historyId)
             }
+        } else {
+            historyId?.let { ScheduleDiagnosticsHistory.update(context, it, "AUTO_DISABLED") }
         }
 
         if (index >= 0 && hour in 0..23 && minute in 0..59) {
@@ -124,8 +138,12 @@ class ExactScanAlarmReceiver : BroadcastReceiver() {
         }
     }
 
-    private fun enqueueScan(context: Context) {
+    private fun enqueueScan(context: Context, historyId: String?) {
+        val input = Data.Builder().apply {
+            if (historyId != null) putString("schedule_history_id", historyId)
+        }.build()
         val request = OneTimeWorkRequestBuilder<ScheduledAutoUploadWorker>()
+            .setInputData(input)
             .setConstraints(
                 Constraints.Builder()
                     .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -150,20 +168,24 @@ class ScheduledAutoUploadWorker(appContext: Context, params: WorkerParameters) :
     override fun doWork(): Result {
         val prefs = applicationContext.getSharedPreferences("settings", 0)
         val oldLegacyUpload = prefs.getBoolean("github_auto_upload", false)
+        val historyId = inputData.getString("schedule_history_id")
         prefs.edit()
             .putBoolean("github_auto_upload", false)
             .putString("scan_origin", "scheduled")
             .apply()
         ScheduleDiagnostics.mark(applicationContext, "last_worker_started")
+        historyId?.let { ScheduleDiagnosticsHistory.update(applicationContext, it, "STARTED") }
         return try {
             val report = ScanEngine.runFull(applicationContext)
             ScheduleDiagnostics.mark(applicationContext, "last_worker_finished")
             applicationContext.getSharedPreferences("diagnostics", 0).edit()
                 .putString("last_worker_report", report.take(3000))
                 .apply()
+            historyId?.let { ScheduleDiagnosticsHistory.update(applicationContext, it, "FINISHED", "report", report.take(500)) }
             Result.success()
         } catch (e: Exception) {
             ScheduleDiagnostics.mark(applicationContext, "last_worker_error", "${e.javaClass.simpleName}: ${e.message}")
+            historyId?.let { ScheduleDiagnosticsHistory.update(applicationContext, it, "ERROR", "error", "${e.javaClass.simpleName}: ${e.message}") }
             Result.retry()
         } finally {
             prefs.edit()
