@@ -7,11 +7,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-/**
- * Small rolling scheduler history. Keeps only the latest 35 schedule runs
- * (7 trading days x 5 expected intraday points) instead of an ever-growing log.
- */
-object ScheduleDiagnostics {
+/** Rolling per-schedule history. Keeps only the latest 35 entries. */
+object ScheduleDiagnosticsHistory {
     private const val PREF = "diagnostics"
     private const val HISTORY_KEY = "schedule_history"
     private const val MAX_ENTRIES = 35
@@ -36,10 +33,6 @@ object ScheduleDiagnostics {
         array.put(entry)
         trim(array)
         prefs(context).edit().putString(HISTORY_KEY, array.toString()).apply()
-        mark(context, "last_schedule_trigger")
-        mark(context, "last_schedule_engine", "EXACT_ALARM")
-        mark(context, "last_schedule_index", index.toString())
-        mark(context, "last_schedule_network", network)
         return id
     }
 
@@ -56,10 +49,6 @@ object ScheduleDiagnostics {
         prefs(context).edit().putString(HISTORY_KEY, array.toString()).apply()
     }
 
-    fun mark(context: Context, key: String, value: String = now()) {
-        prefs(context).edit().putString(key, value).apply()
-    }
-
     fun history(context: Context): JSONArray = read(context)
 
     private fun read(context: Context): JSONArray = try {
@@ -69,9 +58,7 @@ object ScheduleDiagnostics {
     }
 
     private fun removeSameId(array: JSONArray, id: String) {
-        for (i in array.length() - 1 downTo 0) {
-            if (array.optJSONObject(i)?.optString("id") == id) array.remove(i)
-        }
+        for (i in array.length() - 1 downTo 0) if (array.optJSONObject(i)?.optString("id") == id) array.remove(i)
     }
 
     private fun trim(array: JSONArray) {
