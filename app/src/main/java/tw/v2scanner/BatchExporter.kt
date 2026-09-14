@@ -6,15 +6,9 @@ import org.json.JSONObject
 import java.io.File
 
 object BatchExporter {
-    // 6000 is a safe reading/processing unit, not a file-splitting rule.
     const val CHAR_LIMIT = 6000
 
-    data class ExportResult(
-        val count: Int,
-        val directory: File,
-        val maxChars: Int,
-        val stockCount: Int
-    )
+    data class ExportResult(val count: Int, val directory: File, val maxChars: Int, val stockCount: Int)
 
     fun export(context: Context, stamp: String, fullJson: String): ExportResult {
         val root = JSONObject(fullJson)
@@ -26,16 +20,19 @@ object BatchExporter {
         val prefs = context.getSharedPreferences("settings", 0)
         val scanOrigin = prefs.getString("scan_origin", "manual") ?: "manual"
         val sourceTag = if (scanOrigin == "scheduled") "AUTO" else "MANUAL"
-
         val twse = JSONArray()
         val tpex = JSONArray()
         val records = ArrayList<StockRecord>(stocks.length())
 
+        var twseIndex = 0
+        var tpexIndex = 0
         for (i in 0 until stocks.length()) {
             val source = stocks.optJSONObject(i) ?: continue
             val market = source.optString("market").ifBlank { "TWSE" }
+            val index = if (market.equals("TPEX", true)) ++tpexIndex else ++twseIndex
             val marked = JSONObject(source.toString()).apply {
-                put("_read_index", "STOCK_START")
+                put("record_index", index)
+                put("_read_index", "STOCK_START_${index.toString().padStart(4, '0')}")
             }
             if (market.equals("TPEX", true)) tpex.put(marked) else twse.put(marked)
             records += StockRecord(market, source)
@@ -45,28 +42,26 @@ object BatchExporter {
         val twseText = marketJson(stamp, "TWSE", twse)
         val tpexText = marketJson(stamp, "TPEX", tpex)
         val layer1Text = addReadMarkers(layer1Json)
-
         val twseFile = File(dir, "${stamp}_${sourceTag}_TWSE.json")
         val tpexFile = File(dir, "${stamp}_${sourceTag}_TPEX.json")
         val layer1File = File(dir, "${stamp}_${sourceTag}_LAYER1.json")
-
         twseFile.writeText(twseText, Charsets.UTF_8)
         tpexFile.writeText(tpexText, Charsets.UTF_8)
         layer1File.writeText(layer1Text, Charsets.UTF_8)
 
-        // Keep a tiny local manifest for diagnostics only. It is not needed by the
-        // GitHub reader because the read marker lives inside each data file.
         val manifest = JSONObject().apply {
             put("scan_time", stamp)
             put("source", sourceTag)
             put("read_unit", CHAR_LIMIT)
+            put("read_rule", "max_6000_chars_per_read; use _read_index and record_index boundaries")
             put("files", JSONArray().apply {
                 put(fileInfo(twseFile, twseText))
                 put(fileInfo(tpexFile, tpexText))
                 put(fileInfo(layer1File, layer1Text))
             })
         }
-        File(dir, "${stamp}_${sourceTag}_MANIFEST.json").writeText(manifest.toString(), Charsets.UTF_8)
+        val manifestText = manifest.toString(2)
+        File(dir, "${stamp}_${sourceTag}_MANIFEST.json").writeText(manifestText, Charsets.UTF_8)
 
         val layer1Count = JSONObject(layer1Json).optInt("qualified_count", 0)
         context.getSharedPreferences("diagnostics", 0).edit()
@@ -76,22 +71,27 @@ object BatchExporter {
             .putString("archive_local", "成功：TWSE/TPEX/LAYER1｜$sourceTag｜$stamp")
             .apply()
 
-        // Keep the latest Layer1 result for the manual "上傳最新 JSON" action.
         File(baseDir, "layer1_latest.json").writeText(layer1Text, Charsets.UTF_8)
 
-        // GitHub archive upload is schedule-only.
-        // Manual scans never upload implicitly; use the "上傳最新 JSON" button instead.
         val scheduleUpload = prefs.getBoolean("schedule_github_upload", false)
         val archiveResult = if (scanOrigin == "scheduled" && scheduleUpload) {
-            DataArchiveUploader.upload(context, stamp, fullJson, layer1Text, "AUTO")
+            try {
+                context.getSharedPreferences("diagnostics", 0).edit()
+                    .putString("archive_upload_stage", "開始上傳：$stamp")
+                    .apply()
+                DataArchiveUploader.upload(context, stamp, fullJson, layer1Text, "AUTO")
+            } catch (e: Exception) {
+                "失敗：ArchiveExporter ${e.javaClass.simpleName} - ${e.message ?: "無詳細訊息"}"
+            }
         } else {
             "未自動上傳（手動掃描或排程自動上傳未啟用）"
         }
         context.getSharedPreferences("diagnostics", 0).edit()
             .putString("archive_upload", archiveResult)
+            .putString("archive_upload_finished", "${System.currentTimeMillis()}")
             .apply()
 
-        val maxChars = maxOf(twseText.length, tpexText.length, layer1Text.length, manifest.length())
+        val maxChars = maxOf(twseText.length, tpexText.length, layer1Text.length, manifestText.length)
         return ExportResult(3, dir, maxChars, records.size)
     }
 
@@ -101,9 +101,9 @@ object BatchExporter {
         put("market", market)
         put("stock_count", stocks.length())
         put("read_unit", CHAR_LIMIT)
-        put("read_rule", "max_6000_chars_per_read; use _read_index boundaries when available")
+        put("read_rule", "max_6000_chars_per_read; use _read_index and record_index boundaries")
         put("stocks", stocks)
-    }.toString()
+    }.toString(2)
 
     private fun addReadMarkers(source: String): String {
         val root = JSONObject(source)
@@ -111,12 +111,15 @@ object BatchExporter {
         for (key in keys) {
             val array = root.optJSONArray(key) ?: continue
             for (i in 0 until array.length()) {
-                array.optJSONObject(i)?.put("_read_index", "STOCK_START")
+                array.optJSONObject(i)?.apply {
+                    put("record_index", i + 1)
+                    put("_read_index", "STOCK_START_${(i + 1).toString().padStart(4, '0')}")
+                }
             }
         }
         root.put("read_unit", CHAR_LIMIT)
-        root.put("read_rule", "max_6000_chars_per_read; use _read_index boundaries when available")
-        return root.toString()
+        root.put("read_rule", "max_6000_chars_per_read; use _read_index and record_index boundaries")
+        return root.toString(2)
     }
 
     private fun fileInfo(file: File, text: String): JSONObject = JSONObject().apply {
