@@ -19,7 +19,11 @@ object BatchExporter {
 
         val prefs = context.getSharedPreferences("settings", 0)
         val scanOrigin = prefs.getString("scan_origin", "manual") ?: "manual"
-        val sourceTag = if (scanOrigin == "scheduled") "AUTO" else "MANUAL"
+        val sourceTag = when (scanOrigin) {
+            "scheduled" -> "AUTO"
+            "post_market" -> "POST"
+            else -> "MANUAL"
+        }
         val twse = JSONArray()
         val tpex = JSONArray()
         val records = ArrayList<StockRecord>(stocks.length())
