@@ -89,6 +89,9 @@ class MainActivity : Activity() {
         actions.addView(roundButton("手動完整掃描", 58, true).apply {
             setOnClickListener { runFullScan(this) }
         }, actionParams(0))
+        actions.addView(roundButton("盤後掃描", 58, true).apply {
+            setOnClickListener { runPostMarketScan(this) }
+        }, actionParams(10))
         actions.addView(roundButton("驗證 GitHub", 50, false).apply {
             setOnClickListener { verifyGitHubButton(this) }
         }, actionParams(10))
@@ -338,6 +341,34 @@ class MainActivity : Activity() {
             runOnUiThread {
                 result.text = report
                 status.text = "手動掃描＋第一層完成"
+                scanButton.isEnabled = true
+                refreshStatus()
+            }
+        }.start()
+    }
+
+    private fun runPostMarketScan(scanButton: View) {
+        scanButton.isEnabled = false
+        status.text = "正在檢查 09:05～13:05 五個紀錄……"
+        result.text = "正在檢查今天五個盤中時間點的實際 AUTO LAYER1 紀錄。"
+        Thread {
+            val check = PostMarketScanner.checkToday(this)
+            if (!check.passed) {
+                runOnUiThread {
+                    result.text = check.display()
+                    status.text = "盤後門檻未通過"
+                    scanButton.isEnabled = true
+                }
+                return@Thread
+            }
+            runOnUiThread {
+                status.text = "盤後門檻通過，正在執行盤後掃描……"
+                result.text = check.display() + "\n\n正在執行盤後掃描……"
+            }
+            val report = PostMarketScanner.run(this)
+            runOnUiThread {
+                result.text = report
+                status.text = "盤後掃描完成"
                 scanButton.isEnabled = true
                 refreshStatus()
             }
