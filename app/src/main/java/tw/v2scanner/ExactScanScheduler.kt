@@ -17,12 +17,15 @@ import androidx.work.WorkerParameters
 import java.util.Calendar
 
 /**
- * Exact daily scheduler. Each configured HH:MM gets its own one-shot exact alarm.
- * The alarm is re-scheduled for the following day after it fires.
+ * Exact daily scheduler. Intraday and post-market schedules are independent.
+ * Each configured time gets its own one-shot exact alarm and is re-scheduled
+ * for the following day after it fires.
  */
 object ExactScanScheduler {
     private const val BASE_ID = 3526005
+    private const val POST_BASE_ID = 3526105
     private const val EXTRA_INDEX = "schedule_index"
+    private const val EXTRA_KIND = "schedule_kind"
 
     fun canScheduleExact(context: Context): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
@@ -30,16 +33,30 @@ object ExactScanScheduler {
         return alarm.canScheduleExactAlarms()
     }
 
-    fun schedule(context: Context, raw: String = ScanScheduler.DEFAULT_TIMES) {
+    fun schedule(
+        context: Context,
+        raw: String = ScanScheduler.DEFAULT_TIMES,
+        postTime: String? = null
+    ) {
         require(canScheduleExact(context)) { "需要允許『鬧鐘與提醒』的精確鬧鐘權限" }
         cancel(context)
-        val times = ScanScheduler.parseAndValidate(raw)
-        times.forEachIndexed { index, hm ->
-            scheduleOne(context, index, hm.first, hm.second, false)
+
+        if (raw.isNotBlank()) {
+            val times = ScanScheduler.parseAndValidate(raw)
+            times.forEachIndexed { index, hm ->
+                scheduleOne(context, index, hm.first, hm.second, false)
+            }
         }
+
+        if (!postTime.isNullOrBlank()) {
+            val hm = ScanScheduler.parseAndValidate(postTime).single()
+            schedulePostOne(context, hm.first, hm.second, false)
+        }
+
         context.getSharedPreferences("diagnostics", 0).edit()
             .putString("schedule_engine", "EXACT_ALARM")
             .putString("schedule_configured", raw)
+            .putString("post_market_schedule_configured", postTime ?: "")
             .apply()
     }
 
@@ -59,6 +76,7 @@ object ExactScanScheduler {
             putExtra(EXTRA_INDEX, index)
             putExtra("hour", hour)
             putExtra("minute", minute)
+            putExtra(EXTRA_KIND, "intraday")
         }
         val pi = PendingIntent.getBroadcast(
             context,
@@ -69,9 +87,40 @@ object ExactScanScheduler {
         alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pi)
     }
 
+    private fun schedulePostOne(context: Context, hour: Int, minute: Int, tomorrow: Boolean) {
+        val alarm = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val cal = Calendar.getInstance().apply {
+            if (tomorrow) add(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        if (!tomorrow && cal.timeInMillis <= System.currentTimeMillis()) {
+            cal.add(Calendar.DAY_OF_YEAR, 1)
+        }
+        val intent = Intent(context, ExactPostMarketAlarmReceiver::class.java).apply {
+            putExtra("hour", hour)
+            putExtra("minute", minute)
+            putExtra(EXTRA_KIND, "post_market")
+        }
+        val pi = PendingIntent.getBroadcast(
+            context,
+            POST_BASE_ID,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarm.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cal.timeInMillis, pi)
+    }
+
     fun rescheduleNextDay(context: Context, index: Int, hour: Int, minute: Int) {
         if (!canScheduleExact(context)) return
         scheduleOne(context, index, hour, minute, true)
+    }
+
+    fun reschedulePostNextDay(context: Context, hour: Int, minute: Int) {
+        if (!canScheduleExact(context)) return
+        schedulePostOne(context, hour, minute, true)
     }
 
     fun cancel(context: Context) {
@@ -87,6 +136,15 @@ object ExactScanScheduler {
             alarm.cancel(pi)
             pi.cancel()
         }
+        val postIntent = Intent(context, ExactPostMarketAlarmReceiver::class.java)
+        val postPi = PendingIntent.getBroadcast(
+            context,
+            POST_BASE_ID,
+            postIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        alarm.cancel(postPi)
+        postPi.cancel()
     }
 }
 
@@ -156,6 +214,94 @@ class ExactScanAlarmReceiver : BroadcastReceiver() {
             ExistingWorkPolicy.APPEND_OR_REPLACE,
             request
         )
+    }
+}
+
+class ExactPostMarketAlarmReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent?) {
+        val hour = intent?.getIntExtra("hour", -1) ?: -1
+        val minute = intent?.getIntExtra("minute", -1) ?: -1
+        val network = NetworkState.summary(context)
+        val prefs = context.getSharedPreferences("settings", 0)
+
+        ScheduleDiagnostics.mark(context, "last_post_market_trigger")
+        ScheduleDiagnostics.mark(context, "last_post_market_engine", "EXACT_ALARM")
+        ScheduleDiagnostics.mark(context, "last_post_market_network", network)
+
+        val timeValid = hour in 0..23 && minute in 0..59
+        val historyId = if (timeValid) {
+            ScheduleDiagnosticsHistory.start(context, 9000, hour, minute, network, "post_market")
+        } else null
+
+        if (prefs.getBoolean("post_market_enabled", false)) {
+            historyId?.let { ScheduleDiagnosticsHistory.update(context, it, "QUEUED") }
+            enqueuePostMarket(context, historyId)
+        } else {
+            historyId?.let { ScheduleDiagnosticsHistory.update(context, it, "POST_MARKET_DISABLED") }
+        }
+
+        if (timeValid) ExactScanScheduler.reschedulePostNextDay(context, hour, minute)
+    }
+
+    private fun enqueuePostMarket(context: Context, historyId: String?) {
+        val input = Data.Builder().apply {
+            if (historyId != null) putString("schedule_history_id", historyId)
+        }.build()
+        val request = OneTimeWorkRequestBuilder<ScheduledPostMarketWorker>()
+            .setInputData(input)
+            .setConstraints(
+                Constraints.Builder()
+                    .setRequiredNetworkType(NetworkType.CONNECTED)
+                    .build()
+            )
+            .addTag("taiwan_v2_post_market_exact")
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "taiwan_v2_post_market_exact",
+            ExistingWorkPolicy.APPEND_OR_REPLACE,
+            request
+        )
+    }
+}
+
+/**
+ * Scheduled post-market scan. It is intentionally independent from the
+ * intraday MarketStatus gate: at 14:05 the market is already closed, so the
+ * worker first checks the five expected intraday archive files. Three or more
+ * existing records are required before the post-market scan runs.
+ */
+class ScheduledPostMarketWorker(appContext: Context, params: WorkerParameters) : Worker(appContext, params) {
+    override fun doWork(): Result {
+        val historyId = inputData.getString("schedule_history_id")
+        ScheduleDiagnostics.mark(applicationContext, "last_post_market_worker_started")
+        historyId?.let { ScheduleDiagnosticsHistory.update(applicationContext, it, "STARTED") }
+        return try {
+            val check = PostMarketScanner.checkToday(applicationContext)
+            applicationContext.getSharedPreferences("diagnostics", 0).edit()
+                .putString("post_market_check_result", check.display())
+                .putInt("post_market_valid_count", check.validCount)
+                .putBoolean("post_market_passed", check.passed)
+                .apply()
+            if (!check.passed) {
+                ScheduleDiagnostics.mark(applicationContext, "last_post_market_skip", "有效紀錄 ${check.validCount}/5，未達 3/5")
+                historyId?.let {
+                    ScheduleDiagnosticsHistory.update(applicationContext, it, "SKIPPED", "check", check.display().take(1200))
+                }
+                return Result.success()
+            }
+
+            val report = PostMarketScanner.run(applicationContext)
+            ScheduleDiagnostics.mark(applicationContext, "last_post_market_worker_finished")
+            applicationContext.getSharedPreferences("diagnostics", 0).edit()
+                .putString("post_market_last_run", report.take(5000))
+                .apply()
+            historyId?.let { ScheduleDiagnosticsHistory.update(applicationContext, it, "FINISHED", "report", report.take(500)) }
+            Result.success()
+        } catch (e: Exception) {
+            ScheduleDiagnostics.mark(applicationContext, "last_post_market_worker_error", "${e.javaClass.simpleName}: ${e.message}")
+            historyId?.let { ScheduleDiagnosticsHistory.update(applicationContext, it, "ERROR", "error", "${e.javaClass.simpleName}: ${e.message}") }
+            Result.retry()
+        }
     }
 }
 
