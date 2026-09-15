@@ -36,6 +36,8 @@ class MainActivity : Activity() {
     private lateinit var auto: CheckBox
     private lateinit var autoGitHub: CheckBox
     private lateinit var scheduleTimes: EditText
+    private lateinit var postMarketEnabled: CheckBox
+    private lateinit var postMarketTime: EditText
     private lateinit var githubOwner: EditText
     private lateinit var githubRepo: EditText
     private lateinit var githubBranch: EditText
@@ -89,9 +91,6 @@ class MainActivity : Activity() {
         actions.addView(roundButton("手動完整掃描", 58, true).apply {
             setOnClickListener { runFullScan(this) }
         }, actionParams(0))
-        actions.addView(roundButton("盤後掃描", 58, true).apply {
-            setOnClickListener { runPostMarketScan(this) }
-        }, actionParams(10))
         actions.addView(roundButton("驗證 GitHub", 50, false).apply {
             setOnClickListener { verifyGitHubButton(this) }
         }, actionParams(10))
@@ -208,7 +207,7 @@ class MainActivity : Activity() {
         group.addView(test)
         scheduleBox.addView(group)
         scheduleBox.addView(TextView(this).apply {
-            text = "排程時間"
+            text = "盤中排程時間"
             textSize = 14f
             setTextColor(Color.LTGRAY)
             setPadding(0, dp(10), 0, dp(4))
@@ -224,6 +223,30 @@ class MainActivity : Activity() {
             setPadding(dp(12), dp(10), dp(12), dp(10))
         }
         scheduleBox.addView(scheduleTimes, editParams())
+
+        postMarketEnabled = CheckBox(this).apply {
+            text = "啟用盤後排程"
+            isChecked = prefs.getBoolean("post_market_enabled", false)
+            setTextColor(Color.WHITE)
+        }
+        scheduleBox.addView(postMarketEnabled, actionParams(8))
+        scheduleBox.addView(TextView(this).apply {
+            text = "盤後排程時間（獨立於盤中排程）"
+            textSize = 14f
+            setTextColor(Color.LTGRAY)
+            setPadding(0, dp(8), 0, dp(4))
+        })
+        postMarketTime = EditText(this).apply {
+            setText(prefs.getString("post_market_time", PostMarketScanner.DEFAULT_TIME))
+            hint = PostMarketScanner.DEFAULT_TIME
+            inputType = InputType.TYPE_CLASS_TEXT
+            setSingleLine(true)
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.GRAY)
+            background = cardBackground()
+            setPadding(dp(12), dp(10), dp(12), dp(10))
+        }
+        scheduleBox.addView(postMarketTime, editParams())
         scheduleBox.addView(roundButton("儲存排程設定", 50, true).apply { setOnClickListener { saveSettings(trading.isChecked) } }, actionParams(4))
         panel.addView(scheduleBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) })
         attachExpandable(panel, scheduleBox)
@@ -263,25 +286,27 @@ class MainActivity : Activity() {
             scroll.setVerticalScrollbarThumbDrawable(ColorDrawable(Color.rgb(24, 24, 24)))
             scroll.setVerticalScrollbarTrackDrawable(ColorDrawable(Color.TRANSPARENT))
         }
-        fun ensureScheduleFieldVisible() {
+        fun ensureScheduleFieldVisible(field: EditText) {
             scroll.post {
-                val rect=Rect()
-                scheduleTimes.getDrawingRect(rect)
-                scroll.offsetDescendantRectToMyCoords(scheduleTimes,rect)
-                val visibleBottom=scroll.height-scroll.paddingBottom-dp(16)
-                val delta=rect.bottom-visibleBottom
-                if(delta>0) scroll.smoothScrollBy(0,delta)
+                val rect = Rect()
+                field.getDrawingRect(rect)
+                scroll.offsetDescendantRectToMyCoords(field, rect)
+                val visibleBottom = scroll.height - scroll.paddingBottom - dp(16)
+                val delta = rect.bottom - visibleBottom
+                if (delta > 0) scroll.smoothScrollBy(0, delta)
             }
         }
-        scheduleTimes.setOnFocusChangeListener { _,hasFocus -> if(hasFocus) ensureScheduleFieldVisible() }
+        scheduleTimes.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) ensureScheduleFieldVisible(scheduleTimes) }
+        postMarketTime.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) ensureScheduleFieldVisible(postMarketTime) }
         scroll.viewTreeObserver.addOnGlobalLayoutListener {
-            val visible=Rect()
+            val visible = Rect()
             scroll.getWindowVisibleDisplayFrame(visible)
-            val keyboardHeight=(scroll.rootView.height-visible.bottom).coerceAtLeast(0)
-            val extraBottom=if(keyboardHeight>dp(100)) keyboardHeight else 0
-            if(scroll.paddingBottom!=extraBottom){
-                scroll.setPadding(scroll.paddingLeft,scroll.paddingTop,scroll.paddingRight,extraBottom)
-                if(scheduleTimes.hasFocus()) ensureScheduleFieldVisible()
+            val keyboardHeight = (scroll.rootView.height - visible.bottom).coerceAtLeast(0)
+            val extraBottom = if (keyboardHeight > dp(100)) keyboardHeight else 0
+            if (scroll.paddingBottom != extraBottom) {
+                scroll.setPadding(scroll.paddingLeft, scroll.paddingTop, scroll.paddingRight, extraBottom)
+                if (scheduleTimes.hasFocus()) ensureScheduleFieldVisible(scheduleTimes)
+                if (postMarketTime.hasFocus()) ensureScheduleFieldVisible(postMarketTime)
             }
         }
         return scroll
@@ -347,34 +372,6 @@ class MainActivity : Activity() {
         }.start()
     }
 
-    private fun runPostMarketScan(scanButton: View) {
-        scanButton.isEnabled = false
-        status.text = "正在檢查 09:05～13:05 五個紀錄……"
-        result.text = "正在檢查今天五個盤中時間點的實際 AUTO LAYER1 紀錄。"
-        Thread {
-            val check = PostMarketScanner.checkToday(this)
-            if (!check.passed) {
-                runOnUiThread {
-                    result.text = check.display()
-                    status.text = "盤後門檻未通過"
-                    scanButton.isEnabled = true
-                }
-                return@Thread
-            }
-            runOnUiThread {
-                status.text = "盤後門檻通過，正在執行盤後掃描……"
-                result.text = check.display() + "\n\n正在執行盤後掃描……"
-            }
-            val report = PostMarketScanner.run(this)
-            runOnUiThread {
-                result.text = report
-                status.text = "盤後掃描完成"
-                scanButton.isEnabled = true
-                refreshStatus()
-            }
-        }.start()
-    }
-
     private fun verifyGitHubButton(button: View) {
         button.isEnabled = false
         status.text = "正在驗證 GitHub Token／Repository……"
@@ -429,6 +426,9 @@ class MainActivity : Activity() {
         try {
             val times = scheduleTimes.text.toString().trim().ifEmpty { ScanScheduler.DEFAULT_TIMES }
             ScanScheduler.parseAndValidate(times)
+            val postTime = postMarketTime.text.toString().trim().ifEmpty { PostMarketScanner.DEFAULT_TIME }
+            ScanScheduler.parseAndValidate(postTime)
+            if (postTime.count { it == ',' } > 0) throw IllegalArgumentException("盤後排程只能設定一個時間，例如 14:05")
             val token = githubToken.text.toString().trim()
             if (token.isNotEmpty()) GitHubTokenStore.save(this, token)
             prefs.edit()
@@ -437,12 +437,15 @@ class MainActivity : Activity() {
                 .putBoolean("schedule_github_upload", autoGitHub.isChecked)
                 .putString("schedule_mode", if (tradingMode) "trading" else "test")
                 .putString("schedule_times", times)
+                .putBoolean("post_market_enabled", postMarketEnabled.isChecked)
+                .putString("post_market_time", postTime)
                 .putString("github_owner", githubOwner.text.toString().trim())
                 .putString("github_repo", githubRepo.text.toString().trim())
                 .putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" })
                 .apply()
             ScanScheduler.cancel(this)
-            if (auto.isChecked) {
+            ExactScanScheduler.cancel(this)
+            if (auto.isChecked || postMarketEnabled.isChecked) {
                 if (!ExactScanScheduler.canScheduleExact(this)) {
                     ScheduleDiagnostics.mark(this, "schedule_engine", "EXACT_ALARM_PERMISSION_MISSING")
                     try {
@@ -453,8 +456,8 @@ class MainActivity : Activity() {
                     Toast.makeText(this, "請允許『鬧鐘與提醒』後，再按一次「儲存排程設定」", Toast.LENGTH_LONG).show()
                     return
                 }
-                ExactScanScheduler.schedule(this, times)
-            } else ExactScanScheduler.cancel(this)
+                ExactScanScheduler.schedule(this, if (auto.isChecked) times else "", if (postMarketEnabled.isChecked) postTime else null)
+            }
             githubToken.text.clear()
             Toast.makeText(this, "設定已儲存", Toast.LENGTH_SHORT).show()
             refreshStatus()
@@ -524,7 +527,8 @@ class MainActivity : Activity() {
             append("第一層：$layer1Display\n")
             append("第一層候選：${diag.getInt("layer1_count", 0)}\n")
             append("自動上傳：${diag.getString("archive_upload", "尚未執行")}\n")
-            append("手動上傳：${diag.getString("manual_archive_upload", "尚未執行")}")
+            append("手動上傳：${diag.getString("manual_archive_upload", "尚未執行")}\n")
+            append("盤後檢查：${diag.getString("post_market_check_result", "尚未執行")}")
         }
     }
 
@@ -532,11 +536,13 @@ class MainActivity : Activity() {
         if (!::status.isInitialized) return
         val token = if (GitHubTokenStore.hasToken(this)) "已設定" else "未設定"
         val times = prefs.getString("schedule_times", ScanScheduler.DEFAULT_TIMES) ?: ScanScheduler.DEFAULT_TIMES
+        val postTime = prefs.getString("post_market_time", PostMarketScanner.DEFAULT_TIME) ?: PostMarketScanner.DEFAULT_TIME
+        val postEnabled = prefs.getBoolean("post_market_enabled", false)
         val diag = getSharedPreferences("diagnostics", 0)
         val l1 = diag.getString("layer1_status", "尚未執行") ?: "尚未執行"
         val l1Display = if (l1 == "LAYER1_COMPLETE") "完成" else l1
         val engine = diag.getString("schedule_engine", "EXACT_ALARM") ?: "EXACT_ALARM"
-        status.text = "排程：${if (prefs.getBoolean("auto", false)) "已啟用" else "未啟用"}\n時間：$times\n排程引擎：$engine\nGitHub Token：$token\n第一層：$l1Display"
+        status.text = "排程：${if (prefs.getBoolean("auto", false)) "已啟用" else "未啟用"}\n時間：$times\n盤後排程：${if (postEnabled) "已啟用" else "未啟用"}\n盤後時間：$postTime\n排程引擎：$engine\nGitHub Token：$token\n第一層：$l1Display"
     }
 
     override fun onBackPressed() {
