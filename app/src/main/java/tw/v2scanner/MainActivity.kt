@@ -1,6 +1,7 @@
 package tw.v2scanner
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.graphics.Color
 import android.graphics.Rect
 import android.graphics.drawable.ColorDrawable
@@ -25,6 +26,7 @@ import android.widget.RadioGroup
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.net.HttpURLConnection
@@ -88,21 +90,11 @@ class MainActivity : Activity() {
         root.addView(status, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(14); bottomMargin = dp(14) })
 
         val actions = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
-        actions.addView(roundButton("手動完整掃描", 58, true).apply {
-            setOnClickListener { runFullScan(this) }
-        }, actionParams(0))
-        actions.addView(roundButton("驗證 GitHub", 50, false).apply {
-            setOnClickListener { verifyGitHubButton(this) }
-        }, actionParams(10))
-        actions.addView(roundButton("匯出最新 JSON", 50, false).apply {
-            setOnClickListener { exportLatestJson() }
-        }, actionParams(10))
-        actions.addView(roundButton("上傳最新 JSON", 50, false).apply {
-            setOnClickListener { uploadLatestJson(this) }
-        }, actionParams(10))
-        actions.addView(roundButton("查看排程診斷", 50, false).apply {
-            setOnClickListener { showDiagnostics() }
-        }, actionParams(10))
+        actions.addView(roundButton("手動完整掃描", 58, true).apply { setOnClickListener { runFullScan(this) } }, actionParams(0))
+        actions.addView(roundButton("驗證 GitHub", 50, false).apply { setOnClickListener { verifyGitHubButton(this) } }, actionParams(10))
+        actions.addView(roundButton("匯出最新 JSON", 50, false).apply { setOnClickListener { exportLatestJson() } }, actionParams(10))
+        actions.addView(roundButton("上傳最新 JSON", 50, false).apply { setOnClickListener { uploadLatestJson(this) } }, actionParams(10))
+        actions.addView(roundButton("查看排程診斷", 50, false).apply { setOnClickListener { showDiagnostics() } }, actionParams(10))
         root.addView(actions)
 
         root.addView(TextView(this).apply {
@@ -139,468 +131,220 @@ class MainActivity : Activity() {
             setBackgroundColor(Color.rgb(20, 20, 20))
             elevation = dp(12).toFloat()
         }
-
         val top = FrameLayout(this)
-        top.addView(TextView(this).apply {
-            text = "選單"
-            textSize = 23f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-        }, FrameLayout.LayoutParams(-1, dp(52)))
-        top.addView(roundButton("←", 52, false).apply {
-            contentDescription = "關閉選單"
-            setOnClickListener { toggleDrawer(false) }
-        }, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.START))
+        top.addView(TextView(this).apply { text = "選單"; textSize = 23f; setTextColor(Color.WHITE); gravity = Gravity.CENTER }, FrameLayout.LayoutParams(-1, dp(52)))
+        top.addView(roundButton("←", 52, false).apply { contentDescription = "關閉選單"; setOnClickListener { toggleDrawer(false) } }, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.START))
         panel.addView(top)
 
         panel.addView(sectionHeader("GitHub 設定"), actionParams(12))
-        val githubBox = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
-        }
+        val githubBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
         githubOwner = edit("擁有者", prefs.getString("github_owner", "antharas730203"))
         githubRepo = edit("Repository", prefs.getString("github_repo", "TaiwanV2Scanner"))
         githubBranch = edit("分支", prefs.getString("github_branch", "main"))
-        githubToken = edit("Token（留白代表保留既有 Token）", null).apply {
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
-        }
-        githubBox.addView(githubOwner, editParams())
-        githubBox.addView(githubRepo, editParams())
-        githubBox.addView(githubBranch, editParams())
-        githubBox.addView(githubToken, editParams())
+        githubToken = edit("Token（留白代表保留既有 Token）", null).apply { inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD }
+        githubBox.addView(githubOwner, editParams()); githubBox.addView(githubRepo, editParams()); githubBox.addView(githubBranch, editParams()); githubBox.addView(githubToken, editParams())
         githubBox.addView(roundButton("驗證 GitHub", 48, false).apply { setOnClickListener { verifyGitHubButton(this) } }, actionParams(4))
         githubBox.addView(roundButton("儲存 GitHub 設定", 48, true).apply { setOnClickListener { saveGitHubOnly() } }, actionParams(6))
-        panel.addView(githubBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) })
-        attachExpandable(panel, githubBox)
+        panel.addView(githubBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) }); attachExpandable(panel, githubBox)
 
         panel.addView(sectionHeader("自動排程"), actionParams(12))
-        val scheduleBox = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
-        }
-        auto = CheckBox(this).apply {
-            text = "啟用自動排程"
-            isChecked = prefs.getBoolean("auto", false)
-            setTextColor(Color.WHITE)
-        }
-        autoGitHub = CheckBox(this).apply {
-            text = "排程掃描完成後自動上傳 GitHub"
-            isChecked = prefs.getBoolean("github_auto_upload", false)
-            setTextColor(Color.WHITE)
-        }
-        scheduleBox.addView(auto)
-        scheduleBox.addView(autoGitHub)
+        val scheduleBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        auto = CheckBox(this).apply { text = "啟用自動排程"; isChecked = prefs.getBoolean("auto", false); setTextColor(Color.WHITE) }
+        autoGitHub = CheckBox(this).apply { text = "排程掃描完成後自動上傳 GitHub"; isChecked = prefs.getBoolean("github_auto_upload", false); setTextColor(Color.WHITE) }
+        scheduleBox.addView(auto); scheduleBox.addView(autoGitHub)
         val group = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
-        val trading = RadioButton(this).apply {
-            text = "交易時段模式（09:00～13:30）"
-            id = View.generateViewId()
-            isChecked = prefs.getString("schedule_mode", "trading") != "test"
-            setTextColor(Color.WHITE)
-        }
-        val test = RadioButton(this).apply {
-            text = "測試模式（不限交易時段）"
-            id = View.generateViewId()
-            isChecked = prefs.getString("schedule_mode", "trading") == "test"
-            setTextColor(Color.WHITE)
-        }
-        group.addView(trading)
-        group.addView(test)
-        scheduleBox.addView(group)
-        scheduleBox.addView(TextView(this).apply {
-            text = "盤中排程時間"
-            textSize = 14f
-            setTextColor(Color.LTGRAY)
-            setPadding(0, dp(10), 0, dp(4))
-        })
-        scheduleTimes = EditText(this).apply {
-            setText(prefs.getString("schedule_times", ScanScheduler.DEFAULT_TIMES))
-            hint = "09:05,10:05,11:05,12:05,13:05"
-            inputType = InputType.TYPE_CLASS_TEXT
-            setSingleLine(true)
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.GRAY)
-            background = cardBackground()
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-        }
+        val trading = RadioButton(this).apply { text = "交易時段模式（09:00～13:30）"; id = View.generateViewId(); isChecked = prefs.getString("schedule_mode", "trading") != "test"; setTextColor(Color.WHITE) }
+        val test = RadioButton(this).apply { text = "測試模式（不限交易時段）"; id = View.generateViewId(); isChecked = prefs.getString("schedule_mode", "trading") == "test"; setTextColor(Color.WHITE) }
+        group.addView(trading); group.addView(test); scheduleBox.addView(group)
+        scheduleBox.addView(TextView(this).apply { text = "盤中排程時間"; textSize = 14f; setTextColor(Color.LTGRAY); setPadding(0, dp(10), 0, dp(4)) })
+        scheduleTimes = EditText(this).apply { setText(prefs.getString("schedule_times", ScanScheduler.DEFAULT_TIMES)); hint = "09:05,10:05,11:05,12:05,13:05"; inputType = InputType.TYPE_CLASS_TEXT; setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(Color.GRAY); background = cardBackground(); setPadding(dp(12), dp(10), dp(12), dp(10)) }
         scheduleBox.addView(scheduleTimes, editParams())
-
-        postMarketEnabled = CheckBox(this).apply {
-            text = "啟用盤後排程"
-            isChecked = prefs.getBoolean("post_market_enabled", false)
-            setTextColor(Color.WHITE)
-        }
+        postMarketEnabled = CheckBox(this).apply { text = "啟用盤後排程"; isChecked = prefs.getBoolean("post_market_enabled", false); setTextColor(Color.WHITE) }
         scheduleBox.addView(postMarketEnabled, actionParams(8))
-        scheduleBox.addView(TextView(this).apply {
-            text = "盤後排程時間（獨立於盤中排程）"
-            textSize = 14f
-            setTextColor(Color.LTGRAY)
-            setPadding(0, dp(8), 0, dp(4))
-        })
-        postMarketTime = EditText(this).apply {
-            setText(prefs.getString("post_market_time", PostMarketScanner.DEFAULT_TIME))
-            hint = PostMarketScanner.DEFAULT_TIME
-            inputType = InputType.TYPE_CLASS_TEXT
-            setSingleLine(true)
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.GRAY)
-            background = cardBackground()
-            setPadding(dp(12), dp(10), dp(12), dp(10))
-        }
+        scheduleBox.addView(TextView(this).apply { text = "盤後排程時間（獨立於盤中排程）"; textSize = 14f; setTextColor(Color.LTGRAY); setPadding(0, dp(8), 0, dp(4)) })
+        postMarketTime = EditText(this).apply { setText(prefs.getString("post_market_time", PostMarketScanner.DEFAULT_TIME)); hint = PostMarketScanner.DEFAULT_TIME; inputType = InputType.TYPE_CLASS_TEXT; setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(Color.GRAY); background = cardBackground(); setPadding(dp(12), dp(10), dp(12), dp(10)) }
         scheduleBox.addView(postMarketTime, editParams())
         scheduleBox.addView(roundButton("儲存排程設定", 50, true).apply { setOnClickListener { saveSettings(trading.isChecked) } }, actionParams(4))
-        panel.addView(scheduleBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) })
-        attachExpandable(panel, scheduleBox)
+        panel.addView(scheduleBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) }); attachExpandable(panel, scheduleBox)
 
         panel.addView(sectionHeader("關於"), actionParams(12))
-        val aboutBox = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            visibility = View.GONE
-            setPadding(0, dp(8), 0, dp(12))
-        }
-        aboutBox.addView(TextView(this).apply {
-            text = "V0.8.4"
-            textSize = 18f
-            setTextColor(Color.WHITE)
-        })
-        aboutBox.addView(TextView(this).apply {
-            text = "台股 V2 掃描器\n完整 TWSE＋TPEX 市場掃描\n第一層轉機／動能市場預篩\nExact Alarm 精確排程\nGitHub JSON 歸檔\n手動／排程上傳支援\nTWSE、TPEX、LAYER1 三份完整資料"
-            textSize = 14f
-            setTextColor(Color.LTGRAY)
-            setPadding(0, dp(6), 0, 0)
-        })
-        panel.addView(aboutBox)
-        attachExpandable(panel, aboutBox)
+        val aboutBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE; setPadding(0, dp(8), 0, dp(12)) }
+        aboutBox.addView(TextView(this).apply { text = "V0.8.4"; textSize = 18f; setTextColor(Color.WHITE) })
+        aboutBox.addView(TextView(this).apply { text = "台股 V2 掃描器\n完整 TWSE＋TPEX 市場掃描\n第一層轉機／動能市場預篩\nExact Alarm 精確排程\nGitHub JSON 歸檔\n手動／排程上傳支援\nTWSE、TPEX、LAYER1 三份完整資料"; textSize = 14f; setTextColor(Color.LTGRAY); setPadding(0, dp(6), 0, 0) })
+        panel.addView(aboutBox); attachExpandable(panel, aboutBox)
 
         val scroll = ScrollView(this).apply {
-            isVerticalScrollBarEnabled = true
-            scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY
-            setScrollbarFadingEnabled(true)
-            scrollBarFadeDuration = 180
-            scrollBarDefaultDelayBeforeFade = 500
-            setScrollBarSize(dp(4))
-            setFillViewport(true)
-            overScrollMode = View.OVER_SCROLL_NEVER
-            addView(panel)
+            isVerticalScrollBarEnabled = true; scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY; setScrollbarFadingEnabled(true); scrollBarFadeDuration = 180; scrollBarDefaultDelayBeforeFade = 500; setScrollBarSize(dp(4)); setFillViewport(true); overScrollMode = View.OVER_SCROLL_NEVER; addView(panel)
         }
-        if (android.os.Build.VERSION.SDK_INT >= 29) {
-            scroll.setVerticalScrollbarThumbDrawable(ColorDrawable(Color.rgb(24, 24, 24)))
-            scroll.setVerticalScrollbarTrackDrawable(ColorDrawable(Color.TRANSPARENT))
-        }
-        fun ensureScheduleFieldVisible(field: EditText) {
-            scroll.post {
-                val rect = Rect()
-                field.getDrawingRect(rect)
-                scroll.offsetDescendantRectToMyCoords(field, rect)
-                val visibleBottom = scroll.height - scroll.paddingBottom - dp(16)
-                val delta = rect.bottom - visibleBottom
-                if (delta > 0) scroll.smoothScrollBy(0, delta)
-            }
-        }
+        if (android.os.Build.VERSION.SDK_INT >= 29) { scroll.setVerticalScrollbarThumbDrawable(ColorDrawable(Color.rgb(24, 24, 24))); scroll.setVerticalScrollbarTrackDrawable(ColorDrawable(Color.TRANSPARENT)) }
+        fun ensureScheduleFieldVisible(field: EditText) { scroll.post { val rect = Rect(); field.getDrawingRect(rect); scroll.offsetDescendantRectToMyCoords(field, rect); val visibleBottom = scroll.height - scroll.paddingBottom - dp(16); val delta = rect.bottom - visibleBottom; if (delta > 0) scroll.smoothScrollBy(0, delta) } }
         scheduleTimes.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) ensureScheduleFieldVisible(scheduleTimes) }
         postMarketTime.setOnFocusChangeListener { _, hasFocus -> if (hasFocus) ensureScheduleFieldVisible(postMarketTime) }
-        scroll.viewTreeObserver.addOnGlobalLayoutListener {
-            val visible = Rect()
-            scroll.getWindowVisibleDisplayFrame(visible)
-            val keyboardHeight = (scroll.rootView.height - visible.bottom).coerceAtLeast(0)
-            val extraBottom = if (keyboardHeight > dp(100)) keyboardHeight else 0
-            if (scroll.paddingBottom != extraBottom) {
-                scroll.setPadding(scroll.paddingLeft, scroll.paddingTop, scroll.paddingRight, extraBottom)
-                if (scheduleTimes.hasFocus()) ensureScheduleFieldVisible(scheduleTimes)
-                if (postMarketTime.hasFocus()) ensureScheduleFieldVisible(postMarketTime)
-            }
-        }
+        scroll.viewTreeObserver.addOnGlobalLayoutListener { val visible = Rect(); scroll.getWindowVisibleDisplayFrame(visible); val keyboardHeight = (scroll.rootView.height - visible.bottom).coerceAtLeast(0); val extraBottom = if (keyboardHeight > dp(100)) keyboardHeight else 0; if (scroll.paddingBottom != extraBottom) { scroll.setPadding(scroll.paddingLeft, scroll.paddingTop, scroll.paddingRight, extraBottom); if (scheduleTimes.hasFocus()) ensureScheduleFieldVisible(scheduleTimes); if (postMarketTime.hasFocus()) ensureScheduleFieldVisible(postMarketTime) } }
         return scroll
     }
 
     private fun sectionHeader(textValue: String): LinearLayout = LinearLayout(this).apply {
-        orientation = LinearLayout.HORIZONTAL
-        gravity = Gravity.CENTER_VERTICAL
-        setPadding(dp(12), dp(14), dp(12), dp(14))
-        background = buttonBackground(false)
-        addView(TextView(this@MainActivity).apply {
-            text = textValue
-            textSize = 17f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER_VERTICAL
-        }, LinearLayout.LayoutParams(0, -2, 1f))
-        addView(TextView(this@MainActivity).apply {
-            text = "▶"
-            textSize = 18f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-        }, LinearLayout.LayoutParams(dp(36), -1))
+        orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(12), dp(14), dp(12), dp(14)); background = buttonBackground(false)
+        addView(TextView(this@MainActivity).apply { text = textValue; textSize = 17f; setTextColor(Color.WHITE); gravity = Gravity.CENTER_VERTICAL }, LinearLayout.LayoutParams(0, -2, 1f))
+        addView(TextView(this@MainActivity).apply { text = "▶"; textSize = 18f; setTextColor(Color.WHITE); gravity = Gravity.CENTER }, LinearLayout.LayoutParams(dp(36), -1))
     }
 
     private fun attachExpandable(panel: LinearLayout, content: View) {
         val header = panel.getChildAt(panel.childCount - 2) as LinearLayout
         val arrow = header.getChildAt(1) as TextView
-        header.setOnClickListener {
-            content.visibility = if (content.visibility == View.VISIBLE) View.GONE else View.VISIBLE
-            arrow.text = if (content.visibility == View.VISIBLE) "▼" else "▶"
-        }
+        header.setOnClickListener { content.visibility = if (content.visibility == View.VISIBLE) View.GONE else View.VISIBLE; arrow.text = if (content.visibility == View.VISIBLE) "▼" else "▶" }
     }
 
     private fun saveGitHubOnly() {
-        prefs.edit()
-            .putString("github_owner", githubOwner.text.toString().trim())
-            .putString("github_repo", githubRepo.text.toString().trim())
-            .putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" })
-            .apply()
-        val token = githubToken.text.toString().trim()
-        if (token.isNotEmpty()) GitHubTokenStore.save(this, token)
-        githubToken.text.clear()
-        Toast.makeText(this, "GitHub 設定已儲存", Toast.LENGTH_SHORT).show()
-        refreshStatus()
+        prefs.edit().putString("github_owner", githubOwner.text.toString().trim()).putString("github_repo", githubRepo.text.toString().trim()).putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" }).apply()
+        val token = githubToken.text.toString().trim(); if (token.isNotEmpty()) GitHubTokenStore.save(this, token); githubToken.text.clear(); Toast.makeText(this, "GitHub 設定已儲存", Toast.LENGTH_SHORT).show(); refreshStatus()
     }
 
-    private fun toggleDrawer(open: Boolean) {
-        drawerOpen = open
-        drawer.animate().translationX(if (open) 0f else -dp(310).toFloat()).setDuration(220).start()
-    }
+    private fun toggleDrawer(open: Boolean) { drawerOpen = open; drawer.animate().translationX(if (open) 0f else -dp(310).toFloat()).setDuration(220).start() }
 
     private fun runFullScan(scanButton: View) {
-        scanButton.isEnabled = false
-        status.text = "正在完整掃描＋第一層……"
-        Thread {
-            val report = ScanEngine.runFull(this)
-            runOnUiThread {
-                result.text = report
-                status.text = "手動掃描＋第一層完成"
-                scanButton.isEnabled = true
-                refreshStatus()
-            }
-        }.start()
+        scanButton.isEnabled = false; status.text = "正在完整掃描＋第一層……"
+        Thread { val report = ScanEngine.runFull(this); runOnUiThread { result.text = report; status.text = "手動掃描＋第一層完成"; scanButton.isEnabled = true; refreshStatus() } }.start()
     }
 
     private fun verifyGitHubButton(button: View) {
-        button.isEnabled = false
-        status.text = "正在驗證 GitHub Token／Repository……"
-        result.text = "正在向 GitHub API 驗證目前 Token。\n\n這一步只讀取 Repository，不會修改任何檔案。"
-        Thread {
-            val report = verifyGitHubAccess()
-            runOnUiThread {
-                status.text = report.lineSequence().firstOrNull() ?: report
-                result.text = report
-                button.isEnabled = true
-            }
-        }.start()
+        button.isEnabled = false; status.text = "正在驗證 GitHub Token／Repository……"; result.text = "正在向 GitHub API 驗證目前 Token。\n\n這一步只讀取 Repository，不會修改任何檔案。"
+        Thread { val report = verifyGitHubAccess(); runOnUiThread { status.text = report.lineSequence().firstOrNull() ?: report; result.text = report; button.isEnabled = true } }.start()
     }
 
     private fun verifyGitHubAccess(): String {
         val token = GitHubTokenStore.load(this) ?: return "GitHub 驗證失敗：Token 未設定。\n\n請在 GitHub 設定中貼上新的 Fine-grained PAT，儲存後再驗證。"
-        val owner = prefs.getString("github_owner", "antharas730203").orEmpty().trim()
-        val repo = prefs.getString("github_repo", "TaiwanV2Scanner").orEmpty().trim()
-        val branch = prefs.getString("github_branch", "main").orEmpty().trim().ifEmpty { "main" }
+        val owner = prefs.getString("github_owner", "antharas730203").orEmpty().trim(); val repo = prefs.getString("github_repo", "TaiwanV2Scanner").orEmpty().trim(); val branch = prefs.getString("github_branch", "main").orEmpty().trim().ifEmpty { "main" }
         if (owner.isBlank() || repo.isBlank()) return "GitHub 驗證失敗：Repository 設定不完整。"
         return try {
             val url = URL("https://api.github.com/repos/$owner/$repo")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                requestMethod = "GET"
-                connectTimeout = 8000
-                readTimeout = 12000
-                setRequestProperty("Authorization", "Bearer $token")
-                setRequestProperty("Accept", "application/vnd.github+json")
-                setRequestProperty("X-GitHub-Api-Version", "2022-11-28")
-                setRequestProperty("User-Agent", "TaiwanV2Scanner/0.8.4")
-            }
+            val conn = (url.openConnection() as HttpURLConnection).apply { requestMethod = "GET"; connectTimeout = 8000; readTimeout = 12000; setRequestProperty("Authorization", "Bearer $token"); setRequestProperty("Accept", "application/vnd.github+json"); setRequestProperty("X-GitHub-Api-Version", "2022-11-28"); setRequestProperty("User-Agent", "TaiwanV2Scanner/0.8.4") }
             val code = conn.responseCode
-            val body = try {
-                (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
-            } finally { conn.disconnect() }
+            val body = try { (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty() } finally { conn.disconnect() }
             when (code) {
-                200 -> {
-                    val obj = JSONObject(body)
-                    "GitHub 驗證成功 ✓\n\nRepository：${obj.optString("full_name", "$owner/$repo")}\n分支：$branch\nToken：有效\n\n目前已確認 App 可以用這組 Token 讀取 Repository。\n接下來可用「上傳最新 JSON」確認 Contents 寫入。"
-                }
+                200 -> { val obj = JSONObject(body); "GitHub 驗證成功 ✓\n\nRepository：${obj.optString("full_name", "$owner/$repo")}\n分支：$branch\nToken：有效\n\n目前已確認 App 可以用這組 Token 讀取 Repository。\n接下來可用「上傳最新 JSON」確認 Contents 寫入。" }
                 401 -> "GitHub 驗證失敗：HTTP 401\n\nToken 無效、已撤銷、過期，或 App 裡保存的 Token 已失效。"
                 403 -> "GitHub 驗證失敗：HTTP 403\n\nToken 已被 GitHub 辨識，但權限不足。請確認 Token 對 TaiwanV2Scanner 的 Contents 具有 Read and write 權限。"
                 404 -> "GitHub 驗證失敗：HTTP 404\n\nRepository 找不到，或 Token 沒有被授權存取 $owner/$repo。"
                 else -> "GitHub 驗證失敗：HTTP $code\n\nGitHub 回應：${body.take(300)}"
             }
-        } catch (e: Exception) {
-            "GitHub 驗證失敗：${e.javaClass.simpleName}\n\n${e.message ?: "無詳細訊息"}"
-        }
+        } catch (e: Exception) { "GitHub 驗證失敗：${e.javaClass.simpleName}\n\n${e.message ?: "無詳細訊息"}" }
     }
 
     private fun saveSettings(tradingMode: Boolean) {
         try {
-            val times = scheduleTimes.text.toString().trim().ifEmpty { ScanScheduler.DEFAULT_TIMES }
-            ScanScheduler.parseAndValidate(times)
-            val postTime = postMarketTime.text.toString().trim().ifEmpty { PostMarketScanner.DEFAULT_TIME }
-            ScanScheduler.parseAndValidate(postTime)
-            if (postTime.count { it == ',' } > 0) throw IllegalArgumentException("盤後排程只能設定一個時間，例如 14:05")
-            val token = githubToken.text.toString().trim()
-            if (token.isNotEmpty()) GitHubTokenStore.save(this, token)
-            prefs.edit()
-                .putBoolean("auto", auto.isChecked)
-                .putBoolean("github_auto_upload", autoGitHub.isChecked)
-                .putBoolean("schedule_github_upload", autoGitHub.isChecked)
-                .putString("schedule_mode", if (tradingMode) "trading" else "test")
-                .putString("schedule_times", times)
-                .putBoolean("post_market_enabled", postMarketEnabled.isChecked)
-                .putString("post_market_time", postTime)
-                .putString("github_owner", githubOwner.text.toString().trim())
-                .putString("github_repo", githubRepo.text.toString().trim())
-                .putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" })
-                .apply()
-            ScanScheduler.cancel(this)
-            ExactScanScheduler.cancel(this)
+            val times = scheduleTimes.text.toString().trim().ifEmpty { ScanScheduler.DEFAULT_TIMES }; ScanScheduler.parseAndValidate(times)
+            val postTime = postMarketTime.text.toString().trim().ifEmpty { PostMarketScanner.DEFAULT_TIME }; ScanScheduler.parseAndValidate(postTime); if (postTime.count { it == ',' } > 0) throw IllegalArgumentException("盤後排程只能設定一個時間，例如 14:05")
+            val token = githubToken.text.toString().trim(); if (token.isNotEmpty()) GitHubTokenStore.save(this, token)
+            prefs.edit().putBoolean("auto", auto.isChecked).putBoolean("github_auto_upload", autoGitHub.isChecked).putBoolean("schedule_github_upload", autoGitHub.isChecked).putString("schedule_mode", if (tradingMode) "trading" else "test").putString("schedule_times", times).putBoolean("post_market_enabled", postMarketEnabled.isChecked).putString("post_market_time", postTime).putString("github_owner", githubOwner.text.toString().trim()).putString("github_repo", githubRepo.text.toString().trim()).putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" }).apply()
+            ScanScheduler.cancel(this); ExactScanScheduler.cancel(this)
             if (auto.isChecked || postMarketEnabled.isChecked) {
                 if (!ExactScanScheduler.canScheduleExact(this)) {
                     ScheduleDiagnostics.mark(this, "schedule_engine", "EXACT_ALARM_PERMISSION_MISSING")
-                    try {
-                        startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
-                    } catch (_: Exception) {
-                        startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName")))
-                    }
-                    Toast.makeText(this, "請允許『鬧鐘與提醒』後，再按一次「儲存排程設定」", Toast.LENGTH_LONG).show()
-                    return
+                    try { startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName"))) } catch (_: Exception) { startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$packageName"))) }
+                    Toast.makeText(this, "請允許『鬧鐘與提醒』後，再按一次「儲存排程設定」", Toast.LENGTH_LONG).show(); return
                 }
                 ExactScanScheduler.schedule(this, if (auto.isChecked) times else "", if (postMarketEnabled.isChecked) postTime else null)
             }
-            githubToken.text.clear()
-            Toast.makeText(this, "設定已儲存", Toast.LENGTH_SHORT).show()
-            refreshStatus()
-        } catch (e: Exception) {
-            Toast.makeText(this, "設定失敗：${e.message ?: "未知錯誤"}", Toast.LENGTH_LONG).show()
-        }
+            githubToken.text.clear(); Toast.makeText(this, "設定已儲存", Toast.LENGTH_SHORT).show(); refreshStatus()
+        } catch (e: Exception) { Toast.makeText(this, "設定失敗：${e.message ?: "未知錯誤"}", Toast.LENGTH_LONG).show() }
     }
 
     private fun exportLatestJson() {
-        val content = ScanPersistence.lastJson(this)
-        if (content.isNullOrEmpty()) {
-            Toast.makeText(this, "尚未有掃描資料", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val dir = File(getExternalFilesDir(null), "exports")
-        dir.mkdirs()
-        val file = File(dir, "TaiwanV2Scanner_${System.currentTimeMillis()}.json")
-        file.writeText(content, Charsets.UTF_8)
-        Toast.makeText(this, "已匯出：${file.name}", Toast.LENGTH_SHORT).show()
+        val content = ScanPersistence.lastJson(this); if (content.isNullOrEmpty()) { Toast.makeText(this, "尚未有掃描資料", Toast.LENGTH_SHORT).show(); return }
+        val dir = File(getExternalFilesDir(null), "exports"); dir.mkdirs(); val file = File(dir, "TaiwanV2Scanner_${System.currentTimeMillis()}.json"); file.writeText(content, Charsets.UTF_8); Toast.makeText(this, "已匯出：${file.name}", Toast.LENGTH_SHORT).show()
     }
 
     private fun uploadLatestJson(button: View) {
-        val fullJson = ScanPersistence.lastJson(this)
-        if (fullJson.isNullOrEmpty()) {
-            Toast.makeText(this, "尚未有掃描資料", Toast.LENGTH_SHORT).show()
-            return
-        }
-        val baseDir = getExternalFilesDir(null) ?: filesDir
-        val layer1File = File(baseDir, "layer1_latest.json")
-        if (!layer1File.exists()) {
-            Toast.makeText(this, "找不到最新第一層 JSON，請先重新掃描", Toast.LENGTH_LONG).show()
-            return
-        }
+        val fullJson = ScanPersistence.lastJson(this); if (fullJson.isNullOrEmpty()) { Toast.makeText(this, "尚未有掃描資料", Toast.LENGTH_SHORT).show(); return }
+        val baseDir = getExternalFilesDir(null) ?: filesDir; val layer1File = File(baseDir, "layer1_latest.json"); if (!layer1File.exists()) { Toast.makeText(this, "找不到最新第一層 JSON，請先重新掃描", Toast.LENGTH_LONG).show(); return }
         val layer1Json = layer1File.readText(Charsets.UTF_8)
-        val stamp = try {
-            JSONObject(fullJson).optString("scan_time").ifBlank { System.currentTimeMillis().toString() }
-        } catch (_: Exception) {
-            System.currentTimeMillis().toString()
-        }
-        button.isEnabled = false
-        status.text = "正在上傳最新 TWSE／TPEX／LAYER1 JSON……"
-        result.text = "正在上傳最新完整資料至 GitHub。\n\n手動上傳不會啟動新的掃描。"
-        Thread {
-            val report = DataArchiveUploader.upload(this, stamp, fullJson, layer1Json, "MANUAL")
-            getSharedPreferences("diagnostics", 0).edit().putString("manual_archive_upload", report).apply()
-            runOnUiThread {
-                result.text = report
-                status.text = if (report.startsWith("成功")) "最新 JSON 上傳完成" else "最新 JSON 上傳失敗"
-                button.isEnabled = true
-            }
-        }.start()
+        val stamp = try { JSONObject(fullJson).optString("scan_time").ifBlank { System.currentTimeMillis().toString() } } catch (_: Exception) { System.currentTimeMillis().toString() }
+        button.isEnabled = false; status.text = "正在上傳最新 TWSE／TPEX／LAYER1 JSON……"; result.text = "正在上傳最新完整資料至 GitHub。\n\n手動上傳不會啟動新的掃描。"
+        Thread { val report = DataArchiveUploader.upload(this, stamp, fullJson, layer1Json, "MANUAL"); getSharedPreferences("diagnostics", 0).edit().putString("manual_archive_upload", report).apply(); runOnUiThread { result.text = report; status.text = if (report.startsWith("成功")) "最新 JSON 上傳完成" else "最新 JSON 上傳失敗"; button.isEnabled = true } }.start()
     }
 
     private fun showDiagnostics() {
-        val diag = getSharedPreferences("diagnostics", 0)
-        val layer1 = diag.getString("layer1_status", "尚未執行") ?: "尚未執行"
-        val layer1Display = if (layer1 == "LAYER1_COMPLETE") "完成" else layer1
-        result.text = buildString {
-            append("最近掃描\n")
-            append("開始：${diag.getString("last_run_started", "無")}\n")
-            append("完成：${diag.getString("last_run_finished", "無")}\n")
-            append("預期：${diag.getInt("last_expected", 0)}\n")
-            append("取得：${diag.getInt("last_returned", 0)}\n")
-            append("完整率：${diag.getFloat("last_rate", 0f)}\n")
-            append("安全批次：${diag.getInt("last_safe_batch_count", 0)}\n")
-            append("最大批次字元：${diag.getInt("last_safe_batch_max_chars", 0)}\n")
-            append("第一層：$layer1Display\n")
-            append("第一層候選：${diag.getInt("layer1_count", 0)}\n")
-            append("自動上傳：${diag.getString("archive_upload", "尚未執行")}\n")
-            append("手動上傳：${diag.getString("manual_archive_upload", "尚未執行")}\n")
-            append("盤後檢查：${diag.getString("post_market_check_result", "尚未執行")}")
+        val tabs = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(dp(10), dp(10), dp(10), dp(6)); background = ColorDrawable(Color.BLACK) }
+        val content = TextView(this).apply { textSize = 14f; setTextColor(Color.WHITE); setPadding(dp(12), dp(12), dp(12), dp(12)) }
+        val scroll = ScrollView(this).apply { isVerticalScrollBarEnabled = true; scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY; setScrollbarFadingEnabled(false); addView(content); background = cardBackground() }
+        val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(8), dp(8), dp(8), dp(8)); setBackgroundColor(Color.BLACK) }
+        val lastTab = roundButton("last_*", 46, true)
+        val historyTab = roundButton("schedule_history", 46, false)
+        tabs.addView(lastTab, LinearLayout.LayoutParams(0, dp(46), 1f).apply { rightMargin = dp(5) })
+        tabs.addView(historyTab, LinearLayout.LayoutParams(0, dp(46), 1f).apply { leftMargin = dp(5) })
+        root.addView(tabs)
+        root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+
+        fun showLast() {
+            val diag = getSharedPreferences("diagnostics", 0)
+            val layer1 = diag.getString("layer1_status", "尚未執行") ?: "尚未執行"
+            val layer1Display = if (layer1 == "LAYER1_COMPLETE") "完成" else layer1
+            val all = diag.all.entries.sortedBy { it.key }
+            content.text = buildString {
+                append("===== last_* =====\n\n")
+                all.filter { it.key.startsWith("last_") }.forEach { (key, value) -> append(key).append(" = ").append(value).append('\n') }
+                append("\n===== 主要診斷 =====\n")
+                append("layer1_status = ").append(layer1Display).append('\n')
+                append("layer1_count = ").append(diag.getInt("layer1_count", 0)).append('\n')
+                append("archive_upload = ").append(diag.getString("archive_upload", "尚未執行")).append('\n')
+                append("manual_archive_upload = ").append(diag.getString("manual_archive_upload", "尚未執行")).append('\n')
+                append("post_market_check_result = ").append(diag.getString("post_market_check_result", "尚未執行")).append('\n')
+            }
+            lastTab.background = buttonBackground(true); historyTab.background = buttonBackground(false)
         }
+
+        fun showHistory() {
+            val history = ScheduleDiagnosticsHistory.history(this)
+            content.text = buildString {
+                append("===== schedule_history =====\n")
+                append("筆數：${history.length()} / 35\n\n")
+                for (i in history.length() - 1 downTo 0) {
+                    val o = history.optJSONObject(i) ?: continue
+                    append("【${o.optString("time", "無")}】\n")
+                    append("排程：${o.optString("schedule", "無")}   ")
+                    append("狀態：${o.optString("status", "無")}\n")
+                    append("index：${o.optInt("index", -1)}   ")
+                    append("mode：${o.optString("mode", "無")}\n")
+                    append("alarm：${o.optBoolean("alarm", false)}   ")
+                    append("network：${o.optString("network", "無")}\n")
+                    val keys = o.keys()
+                    while (keys.hasNext()) {
+                        val key = keys.next()
+                        if (key !in setOf("id", "time", "schedule", "index", "mode", "status", "alarm", "network")) append("$key：${o.opt(key)}\n")
+                    }
+                    append('\n')
+                }
+                if (history.length() == 0) append("目前沒有排程歷史紀錄。\n")
+            }
+            lastTab.background = buttonBackground(false); historyTab.background = buttonBackground(true)
+        }
+        lastTab.setOnClickListener { showLast() }; historyTab.setOnClickListener { showHistory() }; showLast()
+
+        val dialog = AlertDialog.Builder(this).setTitle("排程診斷").setView(root).setNegativeButton("關閉", null).create()
+        dialog.window?.setBackgroundDrawable(ColorDrawable(Color.BLACK))
+        dialog.show()
+        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.94).toInt(), (resources.displayMetrics.heightPixels * 0.82).toInt())
     }
 
     private fun refreshStatus() {
         if (!::status.isInitialized) return
-        val token = if (GitHubTokenStore.hasToken(this)) "已設定" else "未設定"
-        val times = prefs.getString("schedule_times", ScanScheduler.DEFAULT_TIMES) ?: ScanScheduler.DEFAULT_TIMES
-        val postTime = prefs.getString("post_market_time", PostMarketScanner.DEFAULT_TIME) ?: PostMarketScanner.DEFAULT_TIME
-        val postEnabled = prefs.getBoolean("post_market_enabled", false)
-        val diag = getSharedPreferences("diagnostics", 0)
-        val l1 = diag.getString("layer1_status", "尚未執行") ?: "尚未執行"
-        val l1Display = if (l1 == "LAYER1_COMPLETE") "完成" else l1
-        val engine = diag.getString("schedule_engine", "EXACT_ALARM") ?: "EXACT_ALARM"
+        val token = if (GitHubTokenStore.hasToken(this)) "已設定" else "未設定"; val times = prefs.getString("schedule_times", ScanScheduler.DEFAULT_TIMES) ?: ScanScheduler.DEFAULT_TIMES; val postTime = prefs.getString("post_market_time", PostMarketScanner.DEFAULT_TIME) ?: PostMarketScanner.DEFAULT_TIME; val postEnabled = prefs.getBoolean("post_market_enabled", false); val diag = getSharedPreferences("diagnostics", 0); val l1 = diag.getString("layer1_status", "尚未執行") ?: "尚未執行"; val l1Display = if (l1 == "LAYER1_COMPLETE") "完成" else l1; val engine = diag.getString("schedule_engine", "EXACT_ALARM") ?: "EXACT_ALARM"
         status.text = "排程：${if (prefs.getBoolean("auto", false)) "已啟用" else "未啟用"}\n時間：$times\n盤後排程：${if (postEnabled) "已啟用" else "未啟用"}\n盤後時間：$postTime\n排程引擎：$engine\nGitHub Token：$token\n第一層：$l1Display"
     }
 
-    override fun onBackPressed() {
-        if (drawerOpen) toggleDrawer(false) else super.onBackPressed()
-    }
+    override fun onBackPressed() { if (drawerOpen) toggleDrawer(false) else super.onBackPressed() }
 
-    private fun edit(hintText: String, value: String?): EditText = EditText(this).apply {
-        hint = hintText
-        if (value != null) setText(value)
-        setSingleLine(true)
-        setTextColor(Color.WHITE)
-        setHintTextColor(Color.GRAY)
-        background = cardBackground()
-        setPadding(dp(12), dp(10), dp(12), dp(10))
-    }
+    private fun edit(hintText: String, value: String?): EditText = EditText(this).apply { hint = hintText; if (value != null) setText(value); setSingleLine(true); setTextColor(Color.WHITE); setHintTextColor(Color.GRAY); background = cardBackground(); setPadding(dp(12), dp(10), dp(12), dp(10)) }
 
     private fun roundButton(textValue: String, heightDp: Int, primary: Boolean): Button = Button(this).apply {
-        text = textValue
-        setAllCaps(false)
-        gravity = Gravity.CENTER
-        textSize = if (primary) 16f else 14f
-        setTextColor(Color.WHITE)
-        background = buttonBackground(primary)
-        minimumHeight = 0
-        minHeight = 0
-        setPadding(dp(12), 0, dp(12), 0)
-        layoutParams = ViewGroup.LayoutParams(-1, dp(heightDp))
-        setOnTouchListener { view, event ->
-            when (event.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    view.alpha = 0.72f
-                    view.scaleX = 0.985f
-                    view.scaleY = 0.985f
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    view.alpha = 1f
-                    view.scaleX = 1f
-                    view.scaleY = 1f
-                }
-            }
-            false
-        }
+        text = textValue; setAllCaps(false); gravity = Gravity.CENTER; textSize = if (primary) 16f else 14f; setTextColor(Color.WHITE); background = buttonBackground(primary); minimumHeight = 0; minHeight = 0; setPadding(dp(12), 0, dp(12), 0); layoutParams = ViewGroup.LayoutParams(-1, dp(heightDp))
+        setOnTouchListener { view, event -> when (event.action) { MotionEvent.ACTION_DOWN -> { view.alpha = 0.72f; view.scaleX = 0.985f; view.scaleY = 0.985f }; MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> { view.alpha = 1f; view.scaleX = 1f; view.scaleY = 1f } }; false }
     }
 
-    private fun cardBackground() = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadius = dp(16).toFloat()
-        setColor(Color.rgb(24, 24, 24))
-        setStroke(dp(1), Color.rgb(55, 55, 55))
-    }
-
-    private fun buttonBackground(primary: Boolean) = GradientDrawable().apply {
-        shape = GradientDrawable.RECTANGLE
-        cornerRadius = dp(16).toFloat()
-        setColor(if (primary) Color.rgb(55, 55, 55) else Color.rgb(32, 32, 32))
-        setStroke(dp(1), Color.rgb(70, 70, 70))
-    }
-
+    private fun cardBackground() = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; cornerRadius = dp(16).toFloat(); setColor(Color.rgb(24, 24, 24)); setStroke(dp(1), Color.rgb(55, 55, 55)) }
+    private fun buttonBackground(primary: Boolean) = GradientDrawable().apply { shape = GradientDrawable.RECTANGLE; cornerRadius = dp(16).toFloat(); setColor(if (primary) Color.rgb(55, 55, 55) else Color.rgb(32, 32, 32)); setStroke(dp(1), Color.rgb(70, 70, 70)) }
     private fun actionParams(top: Int): LinearLayout.LayoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(top) }
     private fun editParams(): LinearLayout.LayoutParams = LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(4); bottomMargin = dp(4) }
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
