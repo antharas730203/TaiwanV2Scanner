@@ -1,0 +1,51 @@
+name: One-time API error logging patch
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.event.head_commit.message != 'Apply detailed API error logging'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Patch ScannerCore API error logging
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('app/src/main/java/tw/v2scanner/ScannerCore.kt')
+          s = p.read_text()
+          old = '''data class BatchResult(\n    val requested: Int,\n    val returned: Int,\n    val rate: Double,\n    val failedBatches: Int,\n    val seconds: Double,\n    val records: List<StockRecord>\n)'''
+          new = '''data class BatchResult(\n    val requested: Int,\n    val returned: Int,\n    val rate: Double,\n    val failedBatches: Int,\n    val seconds: Double,\n    val records: List<StockRecord>,\n    val error: String? = null\n)'''
+          if old not in s:
+              raise SystemExit('BatchResult block not found')
+          s = s.replace(old, new, 1)
+          old = '''        } catch (_: Exception) {\n            BatchResult(items.size, 0, 0.0, 1, (System.currentTimeMillis() - started) / 1000.0, emptyList())\n        }'''
+          new = '''        } catch (e: Exception) {\n            val detail = "${e.javaClass.simpleName}: ${e.message ?: \"無詳細訊息\"}"\n            BatchResult(items.size, 0, 0.0, 1, (System.currentTimeMillis() - started) / 1000.0, emptyList(), detail)\n        }'''
+          if old not in s:
+              raise SystemExit('queryMixedBatch catch block not found')
+          s = s.replace(old, new, 1)
+          old = '''                    appendDiag(attempts, "${market.market} 第${index + 1}/${chunks.size}批 ${batchSize}檔：${r.returned}/${chunk.size}")'''
+          new = '''                    appendDiag(attempts, "${market.market} 第${index + 1}/${chunks.size}批 ${batchSize}檔：${r.returned}/${chunk.size}")\n                    if (r.error != null) {\n                        appendDiag(attempts, "API錯誤｜${market.market} 第${index + 1}/${chunks.size}批 ${batchSize}檔｜${r.error}")\n                    }'''
+          if old not in s:
+              raise SystemExit('batch diagnostic line not found')
+          s = s.replace(old, new, 1)
+          old = '''        } catch (e: Exception) {\n            BatchResult(codes.size, 0, 0.0, 1, (System.currentTimeMillis() - started) / 1000.0, emptyList())\n        }'''
+          new = '''        } catch (e: Exception) {\n            val detail = "${e.javaClass.simpleName}: ${e.message ?: \"無詳細訊息\"}"\n            BatchResult(codes.size, 0, 0.0, 1, (System.currentTimeMillis() - started) / 1000.0, emptyList(), detail)\n        }'''
+          if old not in s:
+              raise SystemExit('queryBatch catch block not found')
+          s = s.replace(old, new, 1)
+          p.write_text(s)
+          PY
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app/src/main/java/tw/v2scanner/ScannerCore.kt
+          git commit -m "Apply detailed API error logging"
+          git push
