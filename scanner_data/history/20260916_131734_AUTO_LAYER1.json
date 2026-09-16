@@ -1,0 +1,1072 @@
+{
+  "scan_time": "20260916_131734",
+  "layer": 1,
+  "strategy": "轉機／動能第一層市場預篩",
+  "score_max": 100,
+  "source_records": 1977,
+  "qualified_count": 55,
+  "top_n": 55,
+  "fundamental_items": "Layer2",
+  "stocks": [
+    {
+      "market": "TWSE",
+      "code": "1802",
+      "name": "台玻",
+      "price": "58.3000",
+      "yesterday": "56.0000",
+      "open": "56.4000",
+      "high": "58.4000",
+      "low": "56.2000",
+      "volume": "10398",
+      "layer1_score": 80,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 4.11%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 1,
+      "_read_index": "STOCK_START_0001"
+    },
+    {
+      "market": "TWSE",
+      "code": "2634",
+      "name": "漢翔",
+      "price": "65.1000",
+      "yesterday": "62.0000",
+      "open": "62.0000",
+      "high": "65.1000",
+      "low": "62.0000",
+      "volume": "9107",
+      "layer1_score": 80,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 5.00%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 2,
+      "_read_index": "STOCK_START_0002"
+    },
+    {
+      "market": "TWSE",
+      "code": "3019",
+      "name": "亞光",
+      "price": "138.5000",
+      "yesterday": "132.0000",
+      "open": "132.5000",
+      "high": "139.0000",
+      "low": "132.5000",
+      "volume": "5570",
+      "layer1_score": 80,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 4.92%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 3,
+      "_read_index": "STOCK_START_0003"
+    },
+    {
+      "market": "TWSE",
+      "code": "2353",
+      "name": "宏碁",
+      "price": "31.9000",
+      "yesterday": "30.9000",
+      "open": "31.0000",
+      "high": "31.9000",
+      "low": "30.9500",
+      "volume": "15331",
+      "layer1_score": 75,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 3.24%，強勢但未過熱",
+        "位於日內高檔",
+        "成交活躍"
+      ],
+      "record_index": 4,
+      "_read_index": "STOCK_START_0004"
+    },
+    {
+      "market": "TWSE",
+      "code": "2887",
+      "name": "台新新光金",
+      "price": "44.5000",
+      "yesterday": "43.4000",
+      "open": "43.6000",
+      "high": "44.7500",
+      "low": "43.0500",
+      "volume": "54376",
+      "layer1_score": 75,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 2.53%，強勢但未過熱",
+        "位於日內高檔",
+        "成交活躍"
+      ],
+      "record_index": 5,
+      "_read_index": "STOCK_START_0005"
+    },
+    {
+      "market": "TWSE",
+      "code": "3311",
+      "name": "閎暉",
+      "price": "38.2000",
+      "yesterday": "36.8000",
+      "open": "36.8000",
+      "high": "38.2000",
+      "low": "36.0500",
+      "volume": "1893",
+      "layer1_score": 75,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 3.80%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 6,
+      "_read_index": "STOCK_START_0006"
+    },
+    {
+      "market": "TWSE",
+      "code": "4540",
+      "name": "全球傳動",
+      "price": "60.4000",
+      "yesterday": "57.3000",
+      "open": "58.0000",
+      "high": "60.6000",
+      "low": "57.1000",
+      "volume": "4475",
+      "layer1_score": 75,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 5.41%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 7,
+      "_read_index": "STOCK_START_0007"
+    },
+    {
+      "market": "TPEX",
+      "code": "5483",
+      "name": "中美晶",
+      "price": "183.0000",
+      "yesterday": "176.0000",
+      "open": "179.0000",
+      "high": "183.5000",
+      "low": "178.0000",
+      "volume": "7669",
+      "layer1_score": 75,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 3.98%，強勢但未過熱",
+        "位於日內高檔",
+        "成交活躍"
+      ],
+      "record_index": 8,
+      "_read_index": "STOCK_START_0008"
+    },
+    {
+      "market": "TWSE",
+      "code": "8150",
+      "name": "南茂",
+      "price": "87.1000",
+      "yesterday": "84.4000",
+      "open": "85.2000",
+      "high": "87.3000",
+      "low": "84.7000",
+      "volume": "7388",
+      "layer1_score": 75,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 3.20%，強勢但未過熱",
+        "位於日內高檔",
+        "成交活躍"
+      ],
+      "record_index": 9,
+      "_read_index": "STOCK_START_0009"
+    },
+    {
+      "market": "TPEX",
+      "code": "8358",
+      "name": "金居",
+      "price": "507.0000",
+      "yesterday": "482.0000",
+      "open": "495.5000",
+      "high": "509.0000",
+      "low": "482.5000",
+      "volume": "18120",
+      "layer1_score": 75,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 5.19%，強勢但未過熱",
+        "位於日內高檔",
+        "成交活躍"
+      ],
+      "record_index": 10,
+      "_read_index": "STOCK_START_0010"
+    },
+    {
+      "market": "TWSE",
+      "code": "8996",
+      "name": "高力",
+      "price": "1290.0000",
+      "yesterday": "1220.0000",
+      "open": "1230.0000",
+      "high": "1300.0000",
+      "low": "1230.0000",
+      "volume": "1022",
+      "layer1_score": 75,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 5.74%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 11,
+      "_read_index": "STOCK_START_0011"
+    },
+    {
+      "market": "TWSE",
+      "code": "2344",
+      "name": "華邦電",
+      "price": "168.5000",
+      "yesterday": "159.5000",
+      "open": "163.5000",
+      "high": "169.5000",
+      "low": "163.5000",
+      "volume": "72451",
+      "layer1_score": 72,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 5.64%，強勢但未過熱",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 12,
+      "_read_index": "STOCK_START_0012"
+    },
+    {
+      "market": "TWSE",
+      "code": "2408",
+      "name": "南亞科",
+      "price": "491.5000",
+      "yesterday": "465.5000",
+      "open": "476.0000",
+      "high": "495.0000",
+      "low": "475.0000",
+      "volume": "32149",
+      "layer1_score": 72,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 5.59%，強勢但未過熱",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 13,
+      "_read_index": "STOCK_START_0013"
+    },
+    {
+      "market": "TWSE",
+      "code": "2605",
+      "name": "新興",
+      "price": "36.2500",
+      "yesterday": "35.0500",
+      "open": "35.1000",
+      "high": "36.8000",
+      "low": "35.1000",
+      "volume": "11963",
+      "layer1_score": 72,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 3.42%，強勢但未過熱",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 14,
+      "_read_index": "STOCK_START_0014"
+    },
+    {
+      "market": "TPEX",
+      "code": "4939",
+      "name": "亞電",
+      "price": "81.6000",
+      "yesterday": "78.0000",
+      "open": "78.0000",
+      "high": "83.8000",
+      "low": "78.0000",
+      "volume": "6450",
+      "layer1_score": 72,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 4.62%，強勢但未過熱",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 15,
+      "_read_index": "STOCK_START_0015"
+    },
+    {
+      "market": "TPEX",
+      "code": "6126",
+      "name": "信音",
+      "price": "29.7000",
+      "yesterday": "28.5000",
+      "open": "28.5000",
+      "high": "29.7500",
+      "low": "28.5000",
+      "volume": "566",
+      "layer1_score": 71,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 4.21%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 16,
+      "_read_index": "STOCK_START_0016"
+    },
+    {
+      "market": "TWSE",
+      "code": "2375",
+      "name": "凱美",
+      "price": "120.0000",
+      "yesterday": "117.5000",
+      "open": "118.5000",
+      "high": "120.0000",
+      "low": "117.0000",
+      "volume": "1139",
+      "layer1_score": 70,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 2.13%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 17,
+      "_read_index": "STOCK_START_0017"
+    },
+    {
+      "market": "TWSE",
+      "code": "2401",
+      "name": "凌陽",
+      "price": "24.3500",
+      "yesterday": "23.7500",
+      "open": "23.8000",
+      "high": "24.4000",
+      "low": "23.8000",
+      "volume": "1220",
+      "layer1_score": 70,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 2.53%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 18,
+      "_read_index": "STOCK_START_0018"
+    },
+    {
+      "market": "TPEX",
+      "code": "3260",
+      "name": "威剛",
+      "price": "397.5000",
+      "yesterday": "388.5000",
+      "open": "389.5000",
+      "high": "398.0000",
+      "low": "389.0000",
+      "volume": "2793",
+      "layer1_score": 70,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 2.32%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 19,
+      "_read_index": "STOCK_START_0019"
+    },
+    {
+      "market": "TWSE",
+      "code": "6695",
+      "name": "芯鼎",
+      "price": "47.9500",
+      "yesterday": "45.6000",
+      "open": "46.0000",
+      "high": "47.9500",
+      "low": "46.0000",
+      "volume": "228",
+      "layer1_score": 68,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 5.15%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 20,
+      "_read_index": "STOCK_START_0020"
+    },
+    {
+      "market": "TWSE",
+      "code": "2332",
+      "name": "友訊",
+      "price": "19.2500",
+      "yesterday": "18.8000",
+      "open": "18.8000",
+      "high": "19.4000",
+      "low": "18.8000",
+      "volume": "10912",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.39%，強勢但未過熱",
+        "成交活躍"
+      ],
+      "record_index": 21,
+      "_read_index": "STOCK_START_0021"
+    },
+    {
+      "market": "TWSE",
+      "code": "2352",
+      "name": "佳世達",
+      "price": "29.1000",
+      "yesterday": "28.3000",
+      "open": "28.6000",
+      "high": "29.5000",
+      "low": "28.3000",
+      "volume": "5142",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.83%，強勢但未過熱",
+        "成交活躍"
+      ],
+      "record_index": 22,
+      "_read_index": "STOCK_START_0022"
+    },
+    {
+      "market": "TWSE",
+      "code": "2883",
+      "name": "凱基金",
+      "price": "39.0000",
+      "yesterday": "38.1500",
+      "open": "38.3000",
+      "high": "39.2000",
+      "low": "38.0500",
+      "volume": "34920",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.23%，強勢但未過熱",
+        "成交活躍"
+      ],
+      "record_index": 23,
+      "_read_index": "STOCK_START_0023"
+    },
+    {
+      "market": "TPEX",
+      "code": "3066",
+      "name": "李洲",
+      "price": "25.8000",
+      "yesterday": "24.1500",
+      "open": "24.7500",
+      "high": "26.4000",
+      "low": "24.5500",
+      "volume": "1971",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 6.83%，強勢但未過熱",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 24,
+      "_read_index": "STOCK_START_0024"
+    },
+    {
+      "market": "TPEX",
+      "code": "3363",
+      "name": "上詮",
+      "price": "682.0000",
+      "yesterday": "648.0000",
+      "open": "647.0000",
+      "high": "690.0000",
+      "low": "647.0000",
+      "volume": "2738",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 5.25%，強勢但未過熱",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 25,
+      "_read_index": "STOCK_START_0025"
+    },
+    {
+      "market": "TWSE",
+      "code": "6706",
+      "name": "惠特",
+      "price": "147.5000",
+      "yesterday": "143.5000",
+      "open": "143.5000",
+      "high": "149.0000",
+      "low": "140.5000",
+      "volume": "10323",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.79%，強勢但未過熱",
+        "成交活躍"
+      ],
+      "record_index": 26,
+      "_read_index": "STOCK_START_0026"
+    },
+    {
+      "market": "TPEX",
+      "code": "8096",
+      "name": "擎亞",
+      "price": "89.4000",
+      "yesterday": "86.0000",
+      "open": "86.1000",
+      "high": "90.4000",
+      "low": "85.6000",
+      "volume": "3226",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.95%，強勢但未過熱",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 27,
+      "_read_index": "STOCK_START_0027"
+    },
+    {
+      "market": "TPEX",
+      "code": "3664",
+      "name": "安瑞-KY",
+      "price": "8.1400",
+      "yesterday": "7.6700",
+      "open": "7.6300",
+      "high": "8.1500",
+      "low": "7.6300",
+      "volume": "86",
+      "layer1_score": 65,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 6.13%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 28,
+      "_read_index": "STOCK_START_0028"
+    },
+    {
+      "market": "TPEX",
+      "code": "5301",
+      "name": "寶得利",
+      "price": "5.1600",
+      "yesterday": "5.0000",
+      "open": "5.0000",
+      "high": "5.1700",
+      "low": "5.0000",
+      "volume": "34",
+      "layer1_score": 65,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.20%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 29,
+      "_read_index": "STOCK_START_0029"
+    },
+    {
+      "market": "TPEX",
+      "code": "6210",
+      "name": "慶生",
+      "price": "17.3000",
+      "yesterday": "16.8000",
+      "open": "16.7000",
+      "high": "17.3500",
+      "low": "16.6500",
+      "volume": "12",
+      "layer1_score": 65,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.98%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 30,
+      "_read_index": "STOCK_START_0030"
+    },
+    {
+      "market": "TPEX",
+      "code": "4966",
+      "name": "譜瑞-KY",
+      "price": "540.0000",
+      "yesterday": "523.0000",
+      "open": "526.0000",
+      "high": "542.0000",
+      "low": "525.0000",
+      "volume": "238",
+      "layer1_score": 63,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.25%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 31,
+      "_read_index": "STOCK_START_0031"
+    },
+    {
+      "market": "TWSE",
+      "code": "1708",
+      "name": "東鹼",
+      "price": "49.2000",
+      "yesterday": "48.0000",
+      "open": "48.0500",
+      "high": "49.5000",
+      "low": "48.0500",
+      "volume": "1873",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.50%，強勢但未過熱"
+      ],
+      "record_index": 32,
+      "_read_index": "STOCK_START_0032"
+    },
+    {
+      "market": "TWSE",
+      "code": "1711",
+      "name": "永光",
+      "price": "39.2500",
+      "yesterday": "38.1000",
+      "open": "38.5000",
+      "high": "39.8000",
+      "low": "38.2000",
+      "volume": "2689",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.02%，強勢但未過熱"
+      ],
+      "record_index": 33,
+      "_read_index": "STOCK_START_0033"
+    },
+    {
+      "market": "TWSE",
+      "code": "1714",
+      "name": "和桐",
+      "price": "15.5000",
+      "yesterday": "15.1500",
+      "open": "15.2500",
+      "high": "15.6500",
+      "low": "15.2000",
+      "volume": "4980",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.31%，強勢但未過熱"
+      ],
+      "record_index": 34,
+      "_read_index": "STOCK_START_0034"
+    },
+    {
+      "market": "TWSE",
+      "code": "6282",
+      "name": "康舒",
+      "price": "42.6000",
+      "yesterday": "41.5500",
+      "open": "42.1500",
+      "high": "42.7500",
+      "low": "41.9500",
+      "volume": "2839",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.53%，強勢但未過熱"
+      ],
+      "record_index": 35,
+      "_read_index": "STOCK_START_0035"
+    },
+    {
+      "market": "TPEX",
+      "code": "8042",
+      "name": "金山電",
+      "price": "113.0000",
+      "yesterday": "110.0000",
+      "open": "111.5000",
+      "high": "114.0000",
+      "low": "110.5000",
+      "volume": "1720",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.73%，強勢但未過熱"
+      ],
+      "record_index": 36,
+      "_read_index": "STOCK_START_0036"
+    },
+    {
+      "market": "TWSE",
+      "code": "2464",
+      "name": "盟立",
+      "price": "181.0000",
+      "yesterday": "176.0000",
+      "open": "177.0000",
+      "high": "184.5000",
+      "low": "176.0000",
+      "volume": "6822",
+      "layer1_score": 61,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.84%，強勢但未過熱",
+        "成交活躍"
+      ],
+      "record_index": 37,
+      "_read_index": "STOCK_START_0037"
+    },
+    {
+      "market": "TWSE",
+      "code": "1626",
+      "name": "艾美特-KY",
+      "price": "9.6500",
+      "yesterday": "9.4100",
+      "open": "9.5000",
+      "high": "9.6800",
+      "low": "9.4800",
+      "volume": "50",
+      "layer1_score": 60,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.55%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 38,
+      "_read_index": "STOCK_START_0038"
+    },
+    {
+      "market": "TPEX",
+      "code": "6547",
+      "name": "高端疫苗",
+      "price": "60.6000",
+      "yesterday": "59.7000",
+      "open": "59.7000",
+      "high": "60.7000",
+      "low": "59.1000",
+      "volume": "2228",
+      "layer1_score": 60,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 1.51%，偏強",
+        "位於日內高檔"
+      ],
+      "record_index": 39,
+      "_read_index": "STOCK_START_0039"
+    },
+    {
+      "market": "TWSE",
+      "code": "6449",
+      "name": "鈺邦",
+      "price": "215.5000",
+      "yesterday": "209.5000",
+      "open": "210.5000",
+      "high": "216.5000",
+      "low": "210.0000",
+      "volume": "391",
+      "layer1_score": 58,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.86%，強勢但未過熱"
+      ],
+      "record_index": 40,
+      "_read_index": "STOCK_START_0040"
+    },
+    {
+      "market": "TWSE",
+      "code": "8131",
+      "name": "福懋科",
+      "price": "58.8000",
+      "yesterday": "57.5000",
+      "open": "58.1000",
+      "high": "59.2000",
+      "low": "58.1000",
+      "volume": "682",
+      "layer1_score": 58,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.26%，強勢但未過熱"
+      ],
+      "record_index": 41,
+      "_read_index": "STOCK_START_0041"
+    },
+    {
+      "market": "TWSE",
+      "code": "2603",
+      "name": "長榮",
+      "price": "238.0000",
+      "yesterday": "233.5000",
+      "open": "234.0000",
+      "high": "241.0000",
+      "low": "233.0000",
+      "volume": "9819",
+      "layer1_score": 57,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 1.93%，偏強",
+        "成交活躍"
+      ],
+      "record_index": 42,
+      "_read_index": "STOCK_START_0042"
+    },
+    {
+      "market": "TWSE",
+      "code": "2834",
+      "name": "臺企銀",
+      "price": "18.2000",
+      "yesterday": "18.0000",
+      "open": "18.0000",
+      "high": "18.3000",
+      "low": "18.0000",
+      "volume": "21233",
+      "layer1_score": 57,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 1.11%，偏強",
+        "成交活躍"
+      ],
+      "record_index": 43,
+      "_read_index": "STOCK_START_0043"
+    },
+    {
+      "market": "TWSE",
+      "code": "2880",
+      "name": "華南金",
+      "price": "47.4500",
+      "yesterday": "46.9000",
+      "open": "46.9500",
+      "high": "47.7000",
+      "low": "46.5000",
+      "volume": "15996",
+      "layer1_score": 57,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 1.17%，偏強",
+        "成交活躍"
+      ],
+      "record_index": 44,
+      "_read_index": "STOCK_START_0044"
+    },
+    {
+      "market": "TPEX",
+      "code": "3162",
+      "name": "精確",
+      "price": "73.5000",
+      "yesterday": "68.0000",
+      "open": "68.1000",
+      "high": "74.4000",
+      "low": "68.1000",
+      "volume": "2199",
+      "layer1_score": 57,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 8.09%，強但開始追價",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 45,
+      "_read_index": "STOCK_START_0045"
+    },
+    {
+      "market": "TWSE",
+      "code": "5269",
+      "name": "祥碩",
+      "price": "1475.0000",
+      "yesterday": "1370.0000",
+      "open": "1375.0000",
+      "high": "1480.0000",
+      "low": "1365.0000",
+      "volume": "1325",
+      "layer1_score": 57,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 7.66%，強但開始追價",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 46,
+      "_read_index": "STOCK_START_0046"
+    },
+    {
+      "market": "TWSE",
+      "code": "6924",
+      "name": "榮惠-KY創",
+      "price": "133.5000",
+      "yesterday": "128.0000",
+      "open": "128.0000",
+      "high": "135.0000",
+      "low": "128.0000",
+      "volume": "51",
+      "layer1_score": 57,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 4.30%，強勢但未過熱",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 47,
+      "_read_index": "STOCK_START_0047"
+    },
+    {
+      "market": "TWSE",
+      "code": "2329",
+      "name": "華泰",
+      "price": "42.6500",
+      "yesterday": "41.4500",
+      "open": "41.7000",
+      "high": "43.4500",
+      "low": "41.4500",
+      "volume": "1986",
+      "layer1_score": 56,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.90%，強勢但未過熱"
+      ],
+      "record_index": 48,
+      "_read_index": "STOCK_START_0048"
+    },
+    {
+      "market": "TWSE",
+      "code": "2402",
+      "name": "毅嘉",
+      "price": "54.3000",
+      "yesterday": "53.4000",
+      "open": "53.6000",
+      "high": "54.4000",
+      "low": "53.0000",
+      "volume": "524",
+      "layer1_score": 56,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 1.69%，偏強",
+        "位於日內高檔"
+      ],
+      "record_index": 49,
+      "_read_index": "STOCK_START_0049"
+    },
+    {
+      "market": "TWSE",
+      "code": "3024",
+      "name": "憶聲",
+      "price": "14.5000",
+      "yesterday": "14.3000",
+      "open": "14.3000",
+      "high": "14.5000",
+      "low": "14.3000",
+      "volume": "437",
+      "layer1_score": 56,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 1.40%，偏強",
+        "位於日內高檔"
+      ],
+      "record_index": 50,
+      "_read_index": "STOCK_START_0050"
+    },
+    {
+      "market": "TWSE",
+      "code": "3055",
+      "name": "蔚華科",
+      "price": "163.0000",
+      "yesterday": "157.5000",
+      "open": "161.0000",
+      "high": "167.0000",
+      "low": "158.0000",
+      "volume": "1412",
+      "layer1_score": 56,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.49%，強勢但未過熱"
+      ],
+      "record_index": 51,
+      "_read_index": "STOCK_START_0051"
+    },
+    {
+      "market": "TWSE",
+      "code": "3167",
+      "name": "大量",
+      "price": "819.0000",
+      "yesterday": "792.0000",
+      "open": "810.0000",
+      "high": "832.0000",
+      "low": "805.0000",
+      "volume": "2641",
+      "layer1_score": 56,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.41%，強勢但未過熱"
+      ],
+      "record_index": 52,
+      "_read_index": "STOCK_START_0052"
+    },
+    {
+      "market": "TPEX",
+      "code": "3211",
+      "name": "順達",
+      "price": "369.5000",
+      "yesterday": "361.0000",
+      "open": "362.5000",
+      "high": "377.0000",
+      "low": "362.5000",
+      "volume": "2351",
+      "layer1_score": 56,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.35%，強勢但未過熱"
+      ],
+      "record_index": 53,
+      "_read_index": "STOCK_START_0053"
+    },
+    {
+      "market": "TPEX",
+      "code": "5498",
+      "name": "凱崴",
+      "price": "50.8000",
+      "yesterday": "49.0500",
+      "open": "50.8000",
+      "high": "51.0000",
+      "low": "49.6000",
+      "volume": "746",
+      "layer1_score": 56,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.57%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 54,
+      "_read_index": "STOCK_START_0054"
+    },
+    {
+      "market": "TPEX",
+      "code": "3581",
+      "name": "博磊",
+      "price": "95.6000",
+      "yesterday": "92.8000",
+      "open": "94.5000",
+      "high": "96.5000",
+      "low": "93.3000",
+      "volume": "104",
+      "layer1_score": 55,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.02%，強勢但未過熱"
+      ],
+      "record_index": 55,
+      "_read_index": "STOCK_START_0055"
+    }
+  ],
+  "read_unit": 6000,
+  "read_rule": "max_6000_chars_per_read; use _read_index boundaries when available"
+}
