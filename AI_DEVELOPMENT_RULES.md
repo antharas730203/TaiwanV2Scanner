@@ -25,7 +25,7 @@
 ## 4. Protect data architecture
 
 - Keep TWSE, TPEX and LAYER1 as complete JSON files.
-- Keep `_read_index: STOCK_START` on stock records.
+- Keep sequential per-market `record_index` and numbered `_read_index` markers such as `STOCK_START_0001`.
 - Preserve the <=6000-character safe reading rule.
 - Never split a single stock JSON object in the middle.
 - Do not introduce a required separate INDEX file unless explicitly requested.
@@ -63,6 +63,7 @@
 
 - Update `versionName` and `versionCode` intentionally.
 - Any installable update over an existing release must have a higher `versionCode` and the same release signing identity.
+- Current version: V0.8.5 / versionCode 21.
 - Do not claim a new APK is ready until CI has verified the Release APK.
 
 ## 8. UI changes
@@ -70,6 +71,7 @@
 - Keep the main screen clean and focused on operation.
 - Version and feature descriptions belong in `關於`.
 - Preserve the requested drawer behavior: right-side arrows, `▼` open / `▶` closed, scrolling, hidden scrollbar, keyboard avoidance, clear spacing.
+- Main screen actions currently include manual scan, GitHub verification, JSON export/upload and schedule diagnostics.
 - Do not modify scanning behavior while making UI-only changes.
 
 ## 9. Build verification
