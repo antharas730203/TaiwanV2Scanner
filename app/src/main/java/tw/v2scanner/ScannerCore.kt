@@ -64,7 +64,8 @@ data class BatchResult(
     val rate: Double,
     val failedBatches: Int,
     val seconds: Double,
-    val records: List<StockRecord>
+    val records: List<StockRecord>,
+    val error: String? = null
 )
 data class FullScanResult(
     val expected: Int,
@@ -129,6 +130,9 @@ object Market {
                     failedBatches += r.failedBatches
                     for (record in r.records) records[record.raw.optString("c")] = record
                     appendDiag(attempts, "${market.market} 第${index + 1}/${chunks.size}批 ${batchSize}檔：${r.returned}/${chunk.size}")
+                    if (r.error != null) {
+                        appendDiag(attempts, "API錯誤｜${market.market} 第${index + 1}/${chunks.size}批 ${batchSize}檔｜${r.error}")
+                    }
                 }
             }
             val rate = if (allCodes.isEmpty()) 0.0 else records.size * 100.0 / allCodes.size
@@ -184,8 +188,9 @@ object Market {
             }
             val rate = records.size * 100.0 / items.size
             BatchResult(items.size, records.size, rate, 0, (System.currentTimeMillis() - started) / 1000.0, records)
-        } catch (_: Exception) {
-            BatchResult(items.size, 0, 0.0, 1, (System.currentTimeMillis() - started) / 1000.0, emptyList())
+        } catch (e: Exception) {
+            val detail = "${e.javaClass.simpleName}: ${e.message ?: "無詳細訊息"}"
+            BatchResult(items.size, 0, 0.0, 1, (System.currentTimeMillis() - started) / 1000.0, emptyList(), detail)
         }
     }
 
@@ -212,7 +217,8 @@ object Market {
             val rate = records.size * 100.0 / codes.size
             BatchResult(codes.size, records.size, rate, 0, (System.currentTimeMillis() - started) / 1000.0, records)
         } catch (e: Exception) {
-            BatchResult(codes.size, 0, 0.0, 1, (System.currentTimeMillis() - started) / 1000.0, emptyList())
+            val detail = "${e.javaClass.simpleName}: ${e.message ?: "無詳細訊息"}"
+            BatchResult(codes.size, 0, 0.0, 1, (System.currentTimeMillis() - started) / 1000.0, emptyList(), detail)
         }
     }
 
