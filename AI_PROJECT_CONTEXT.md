@@ -8,8 +8,8 @@
 - Repository: `antharas730203/TaiwanV2Scanner`
 - Default branch: `main`
 - Package / applicationId: `tw.v2scanner`
-- Current development version: V0.8.3 / versionCode 19
-- Previous verified baseline: V0.8.2 / versionCode 18
+- Current development version: **V0.8.5 / versionCode 21**
+- Previous verified baseline: V0.8.4 / versionCode 20
 - Historical stable baseline: V0.6.8
 
 ## 2. Scope
@@ -31,13 +31,15 @@ Important components:
 - `BatchExporter.kt`: creates local complete JSON outputs and handles scheduled GitHub archive upload when enabled.
 - `DataArchiveUploader.kt`: uploads complete TWSE/TPEX/LAYER1 history files to GitHub and securely loads the GitHub token.
 - `MainActivity.kt`: App UI, settings, manual actions, status and diagnostics.
-- `ExactScanScheduler.kt`: exact alarm scheduling.
-- `BootReceiver.kt`: restores scheduling after boot.
+- `ExactScanScheduler.kt`: exact alarm scheduling, including independent post-market scheduling.
+- `BootReceiver.kt`: restores intraday and post-market scheduling after reboot.
+- `PostMarketScanner.kt`: checks the five expected intraday Layer1 archive records and runs the independent post-market scan when at least 3 of 5 records exist.
+- `ScheduleDiagnostics.kt`: stores rolling schedule history for diagnostics.
 
 ## 4. Scanner rules that must remain stable
 
 - Full scan covers TWSE + TPEX.
-- Current real-world scan result has been around 1981 records with about 99.95% success and zero failed batches in a successful run.
+- Current real-world scan result has been around 1980 records with high completion rate in successful runs.
 - Adaptive batch sizes are `[150, 125, 100, 75, 50]`.
 - MIS endpoint is the established TWSE quote endpoint.
 - Do not replace the working scanner API or batch algorithm unless explicitly requested and tested.
@@ -50,17 +52,15 @@ The archive consists of three complete JSON files per scan:
 2. TPEX
 3. LAYER1
 
-Every stock record carries:
+Record indexing is embedded in the JSON records. Each market has its own sequential `record_index`, and records carry numbered `_read_index` markers such as `STOCK_START_0001`.
 
-`"_read_index": "STOCK_START"`
-
-Root data carries the 6000-character read rule. The 6000-character value is a safe reading/processing unit, not a requirement to split files at exactly 6000 characters.
+Root data carries the 6000-character safe reading rule. The 6000-character value is a safe reading/processing unit, not a requirement to split files at exactly 6000 characters.
 
 Never split an individual stock JSON object in the middle.
 
 No separate INDEX JSON is required. Record markers are embedded in the records themselves.
 
-Layer1 currently records fields such as layer, strategy, source_records, qualified_count, top_n and qualified/result stock data.
+Layer1 records its layer, strategy, source records, qualified count, top_n and qualified/result stock data as implemented by the current source.
 
 ## 6. GitHub archive naming
 
@@ -80,7 +80,23 @@ A manual scan must not implicitly upload to GitHub. The user must press `上傳�
 
 A scheduled scan uploads automatically only when `排程掃描完成後自動上傳 GitHub` is enabled.
 
-## 7. GitHub credentials and signing — critical
+## 7. Post-market scheduling
+
+Post-market scheduling is independent from the intraday schedule.
+
+- Intraday default: `09:05,10:05,11:05,12:05,13:05`.
+- Post-market default: `14:05`.
+- Drawer setting: `啟用盤後排程` plus one configurable `盤後排程時間`.
+- Do not add 14:05 into the intraday schedule list because trading mode ends at 13:30.
+- At the post-market trigger, inspect the current day's five expected Layer1 history records.
+- Existing file = that timepoint produced a record.
+- Missing file = no record; it does NOT mean the market was closed.
+- At least 3 of 5 existing records is required to run the post-market scan.
+- Stock count is not used as the existence criterion.
+- No separate persistent status file is required.
+- Post-market scheduling is restored after device reboot.
+
+## 8. GitHub credentials and signing — critical
 
 Never put real tokens, passwords, keystore contents, or secret values in source control or AI documentation.
 
@@ -99,21 +115,34 @@ The workflow creates `keystore.properties`, builds Release, verifies the APK sig
 
 Any future version update must preserve this signing setup so V0.8.x/V0.9.x updates can install over the existing signed App.
 
-## 8. Scheduling
+## 9. Scheduling diagnostics
 
-- Exact Alarm is the established scheduling mechanism.
-- Android 31+ exact-alarm permission must be respected.
-- Boot receiver restores scheduling.
-- Trading mode and test mode are supported.
-- Scheduled auto-upload is separate from manual upload.
+`ScheduleDiagnosticsHistory` keeps a rolling history of up to 35 schedule events in SharedPreferences.
 
-## 9. Current UI direction
+The App's `查看排程診斷` UI now provides two tabs:
+
+- `last_*`: current diagnostic key/value state.
+- `schedule_history`: recent scheduled alarm history, newest first.
+
+History can show trigger time, configured schedule, status, index, mode, alarm/network state and additional fields written by the scheduler/worker.
+
+This history is intended to diagnose missing scheduled scans and upload gaps. It must not expose tokens or secret values.
+
+## 10. Current UI direction
 
 Main screen should be clean:
 
 - Title only: `台股 V2 掃描器`
 - Version and feature descriptions belong in `選單 → 關於`, not on the main screen.
 - Main screen keeps current operational status and action buttons.
+
+Current main actions:
+
+1. `手動完整掃描`
+2. `驗證 GitHub`
+3. `匯出最新 JSON`
+4. `上傳最新 JSON`
+5. `查看排程診斷`
 
 Drawer requirements:
 
@@ -127,32 +156,25 @@ Drawer requirements:
 - Keyboard must not obscure schedule time input.
 - Keep clear spacing between sections and expanded controls.
 
-Current main actions:
+## 11. About section
 
-1. `手動完整掃描`
-2. `驗證 GitHub`
-3. `匯出最新 JSON`
-4. `上傳最新 JSON`
-5. `查看排程診斷`
+Current intended version: **V0.8.5**.
 
-Do not re-add CSV/share actions to the main UI unless explicitly requested.
+Feature descriptions include:
 
-## 10. About section
-
-Version and feature descriptions should be consolidated here. Current intended content includes:
-
-- V0.8.3
 - 台股 V2 掃描器
 - 完整 TWSE＋TPEX 市場掃描
 - 第一層轉機／動能市場預篩
 - Exact Alarm 精確排程
+- 獨立盤後排程
+- 排程歷史診斷
 - GitHub JSON 歸檔
 - 手動／排程上傳支援
 - TWSE、TPEX、LAYER1 三份完整資料
 
 Do not put strategy details here; only describe the App's implemented role.
 
-## 11. Display wording
+## 12. Display wording
 
 Prefer user-friendly status wording. For example:
 
@@ -160,15 +182,16 @@ Prefer user-friendly status wording. For example:
 - `最大批次字元` should be interpreted/displayed as `最大檔案字元` when it represents the largest exported JSON size, not an API batch size.
 - Avoid exposing internal implementation names unless useful for diagnostics.
 
-## 12. Safe development procedure
+## 13. Safe development procedure
 
 Before modifying code:
 
 1. Read this file.
 2. Read `AI_DEVELOPMENT_RULES.md`.
-3. Fetch the current file from `main` and use its current blob SHA for updates.
-4. Check the current version and signing configuration.
-5. Do not overwrite large/core files from memory or partial snippets.
+3. Read `CHANGELOG_AI.md` for version/regression history.
+4. Fetch the current file from `main` and use its current blob SHA for updates.
+5. Check the current version and signing configuration.
+6. Do not overwrite large/core files from memory or partial snippets.
 
 After modifying code:
 
@@ -180,10 +203,11 @@ After modifying code:
 6. Verify package, versionName and versionCode.
 7. Only then report the build as successful.
 
-## 13. Historical safety notes
+## 14. Historical safety notes
 
 - V0.6.8 is the last known-good historical baseline.
 - Do not delete useful historical source merely to clean up the repository.
 - ScannerCore has previously been accidentally overwritten; protect it from unnecessary full-file replacement.
 - DataArchiveUploader has been verified to upload all three complete files.
-- A single App success message may summarize all three uploads; verify the actual GitHub paths when testing.
+- A single App success message may summarize all three uploads; verify the actual GitHub paths when testing uploads.
+- Previous UI repair work briefly introduced an intermediate MainActivity source; the current `main` file is the source of truth and must be fetched before future edits.
