@@ -119,42 +119,71 @@ object Market {
         val allCodes = markets.flatMap { it.codes }.distinct()
         var batchSize = initialBatch
         val attempts = ArrayList<String>()
-        while (true) {
-            val started = System.currentTimeMillis()
-            val records = LinkedHashMap<String, StockRecord>()
-            var failedBatches = 0
-            for (market in markets) {
-                val chunks = market.codes.chunked(batchSize)
-                for ((index, chunk) in chunks.withIndex()) {
-                    val r = queryBatch(chunk, market.market, batchSize)
-                    failedBatches += r.failedBatches
-                    for (record in r.records) records[record.raw.optString("c")] = record
-                    appendDiag(attempts, "${market.market} 第${index + 1}/${chunks.size}批 ${batchSize}檔：${r.returned}/${chunk.size}")
-                    if (r.error != null) {
-                        appendDiag(attempts, "API錯誤｜${market.market} 第${index + 1}/${chunks.size}批 ${batchSize}檔｜${r.error}")
-                    }
-                }
-            }
-            val rate = if (allCodes.isEmpty()) 0.0 else records.size * 100.0 / allCodes.size
-            val seconds = (System.currentTimeMillis() - started) / 1000.0
-            attempts += "批次 $batchSize 完成：${records.size}/${allCodes.size} = ${"%.2f".format(rate)}%｜失敗批次 $failedBatches｜${"%.2f".format(seconds)} 秒"
-            if (rate >= MIN_ACCEPT_RATE || batchSize == batchSizes.last()) {
-                val missing = allCodes.filterNot { records.containsKey(it) }
-                return FullScanResult(
-                    expected = allCodes.size,
-                    returned = records.size,
-                    rate = rate,
-                    failedBatches = failedBatches,
-                    seconds = seconds,
-                    finalBatchSize = batchSize,
-                    markets = markets,
-                    records = records.values.toList(),
-                    missing = missing,
-                    attempts = attempts
+        val records = LinkedHashMap<String, StockRecord>()
+        var failedBatches = 0
+        val startedAll = System.currentTimeMillis()
+
+        for (market in markets) {
+            var offset = 0
+            var batchIndex = 0
+            while (offset < market.codes.size) {
+                val chunk = market.codes.subList(offset, minOf(offset + batchSize, market.codes.size))
+                batchIndex++
+                val r = queryBatch(chunk, market.market, batchSize)
+                failedBatches += r.failedBatches
+                appendDiag(
+                    attempts,
+                    "${market.market} 第${batchIndex}批 ${batchSize}檔：${r.returned}/${chunk.size} = ${"%.2f".format(r.rate)}%"
                 )
+                if (r.error != null) {
+                    appendDiag(
+                        attempts,
+                        "API錯誤｜${market.market} 第${batchIndex}批 ${batchSize}檔｜${r.error}"
+                    )
+                }
+
+                val batchAccepted = r.error == null && r.rate >= MIN_ACCEPT_RATE
+                if (batchAccepted || batchSize == batchSizes.last()) {
+                    for (record in r.records) {
+                        records[record.raw.optString("c")] = record
+                    }
+                    if (!batchAccepted && batchSize == batchSizes.last()) {
+                        appendDiag(
+                            attempts,
+                            "最低批次 50 檔仍未達 ${MIN_ACCEPT_RATE.toInt()}%：保留目前回傳資料，繼續後續批次；最終完整率仍需全市場驗證"
+                        )
+                    }
+                    offset += chunk.size
+                    continue
+                }
+
+                val nextBatch = batchSizes.first { it < batchSize }
+                appendDiag(
+                    attempts,
+                    "即時降頻｜${market.market} 第${batchIndex}批：${batchSize} → ${nextBatch} 檔；重新處理同一段資料"
+                )
+                batchSize = nextBatch
+                batchIndex--
             }
-            batchSize = batchSizes.first { it < batchSize }
         }
+
+        val rate = if (allCodes.isEmpty()) 0.0 else records.size * 100.0 / allCodes.size
+        val seconds = (System.currentTimeMillis() - startedAll) / 1000.0
+        attempts += "即時降頻掃描完成：${records.size}/${allCodes.size} = ${"%.2f".format(rate)}%｜失敗批次 $failedBatches｜${"%.2f".format(seconds)} 秒｜最終批次 $batchSize"
+
+        val missing = allCodes.filterNot { records.containsKey(it) }
+        return FullScanResult(
+            expected = allCodes.size,
+            returned = records.size,
+            rate = rate,
+            failedBatches = failedBatches,
+            seconds = seconds,
+            finalBatchSize = batchSize,
+            markets = markets,
+            records = records.values.toList(),
+            missing = missing,
+            attempts = attempts
+        )
     }
 
     fun manualSingleBatch(markets: List<MarketCodes>, size: Int = 150): BatchResult {
