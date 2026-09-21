@@ -83,7 +83,7 @@
 
 - Update `versionName` and `versionCode` intentionally.
 - Any installable update over an existing release must have a higher `versionCode` and the same release signing identity.
-- Current version: V0.8.8 / versionCode 24.
+- Current version: V0.8.9 / versionCode 25.
 - Do not claim a new APK is ready until CI has verified the Release APK.
 
 ## 8. Scheduling / temporary network recovery
@@ -139,3 +139,10 @@ If a build fails:
 - Fix the smallest possible scope.
 - Re-run verification.
 - Do not declare success based on a previous successful build.
+
+
+### V0.8.9 scheduling/network rules
+- Do not perform a MarketStatus network probe inside the exact-alarm receiver before WorkManager is queued.
+- Each intraday schedule round must have an independent WorkManager unique name derived from its schedule-history ID.
+- Use WorkManager NetworkType.CONNECTED as the system-managed network wait; MarketStatus is authoritative only when the worker starts.
+- Do not add force-Wi-Fi, force-cellular, or long-running WakeLock behavior unless separately justified by device evidence.
