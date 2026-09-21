@@ -8,7 +8,7 @@
 - Repository: `antharas730203/TaiwanV2Scanner`
 - Default branch: `main`
 - Package / applicationId: `tw.v2scanner`
-- Current development version: **V0.8.8 / versionCode 24**
+- Current development version: **V0.8.9 / versionCode 25**
 - Previous verified baseline: V0.8.5 / versionCode 21
 - Historical stable baseline: V0.6.8
 
@@ -223,3 +223,11 @@ After modifying code:
 - DataArchiveUploader has been verified to upload all three complete files.
 - A single App success message may summarize all three uploads; verify the actual GitHub paths when testing uploads.
 - Previous UI repair work briefly introduced an intermediate MainActivity source; the current `main` file is the source of truth and must be fetched before future edits.
+
+
+### V0.8.9 scheduling/network refinement
+- Exact intraday alarms remain unchanged at 09:05, 10:05, 11:05, 12:05, 13:05 and continue to use RTC_WAKEUP + setExactAndAllowWhileIdle.
+- Trading-mode alarm receivers no longer probe MarketStatus before queuing the scan. Each exact schedule round is handed directly to WorkManager with NetworkType.CONNECTED; the worker performs the authoritative MarketStatus check after network availability.
+- Intraday scheduled work now uses a unique WorkManager name per schedule-history ID, preventing a waiting round from being chained behind another intraday round.
+- AndroidManifest declares ACCESS_NETWORK_STATE for the existing NetworkState diagnostics.
+- ScannerCore acquisition, TWSE/TPEX endpoints, adaptive batches, JSON/archive structure, GitHub upload architecture, scan times, and 5314 monitoring schedule are unchanged.
