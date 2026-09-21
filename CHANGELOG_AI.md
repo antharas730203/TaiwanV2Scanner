@@ -1,5 +1,23 @@
 # TaiwanV2Scanner — AI Change Log
 
+## V0.8.8 — 2026-09-21
+
+### Scheduling / temporary network recovery
+
+- Intraday exact alarms remain `09:05,10:05,11:05,12:05,13:05`; post-market scheduling remains independent.
+- `MarketStatus` now distinguishes `OK`, `RETRY`, and `SKIP`.
+- Temporary network/API failures such as `UnknownHostException`, `ConnectException`, `SocketTimeoutException`, `NoRouteToHostException` and related interrupted I/O are classified as retryable instead of market/session skips.
+- A scheduled trading scan that hits a temporary network failure is recorded as `WAIT_NETWORK` and enqueued through WorkManager with `NetworkType.CONNECTED`.
+- The worker re-checks market status before scanning and retries while the failure remains transient.
+- A waiting scan that reaches after 13:30 is recorded as `EXPIRED_WAITING_NETWORK` and is not executed after the intraday session.
+- Confirmed non-session / no-market-response cases remain `SKIPPED`.
+- Existing scan times, scanner acquisition logic, adaptive batch sizes, JSON/archive structure, GitHub credentials/upload flow, and 5314 monitoring schedule are unchanged.
+
+### Diagnostics
+
+- `schedule_history` can now distinguish `WAIT_NETWORK`, `FINISHED`, `SKIPPED`, and `EXPIRED_WAITING_NETWORK` for this failure path.
+- Temporary network recovery is recorded with the actual market-status reason and current network summary.
+
 This is the persistent AI-facing development history. Keep entries concise and factual.
 
 ## V0.8.5 — 2026-09-16
