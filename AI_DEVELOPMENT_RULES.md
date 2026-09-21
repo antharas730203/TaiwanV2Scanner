@@ -30,6 +30,26 @@
 - Never split a single stock JSON object in the middle.
 - Do not introduce a required separate INDEX file unless explicitly requested.
 
+## 4.1 AI讀檔與歷史資料搜尋規則
+
+- 查詢 Scanner 歷史資料時，禁止直接猜測或拼接檔名後判定檔案不存在。
+- 必須先讀取 `scanner_data/history/` 目錄，取得實際存在的檔案清單。
+- 依檔名中的 `YYYYMMDD_HHMMSS` 時間排序，找出當日實際存在的最新資料檔。
+- App 顯示的 `updated` 時間不可直接視為 GitHub 歷史檔案名稱時間。
+- 例如 App 顯示 `11:05:21`，GitHub 實際檔案可能是 `11:05:12`；必須以 GitHub 實際存在的檔案為準。
+- 找到檔案後，再讀取 JSON 內容。
+- 查詢特定股票時，必須以股票代號欄位精確比對，例如 `c = "5314"`，不可只用全文模糊搜尋數字 `5314`。
+- 找到股票後，至少核對：
+  - `c` 股票代號
+  - `n` 股票名稱
+  - `market`
+  - `record_index`
+  - `_read_index`
+- 若查詢的是 TPEX 股票，優先確認最新的 `*_AUTO_TPEX.json`；TWSE 股票則確認最新的 `*_AUTO_TWSE.json`。
+- 若存在最新 AUTO 檔案，不得因預期的時間戳不存在而判定「沒有資料」。
+- 若目錄清單顯示最新檔案存在，必須以該實際檔案內容為準。
+- 只有在確認目錄中確實沒有較新的檔案後，才能回答「尚未產生最新掃描檔」。
+
 ## 5. Manual vs automatic upload
 
 - Manual full scan must not implicitly upload to GitHub.
