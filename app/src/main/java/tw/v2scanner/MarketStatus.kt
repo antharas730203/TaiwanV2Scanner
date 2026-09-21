@@ -2,7 +2,12 @@ package tw.v2scanner
 
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.InterruptedIOException
+import java.net.ConnectException
 import java.net.HttpURLConnection
+import java.net.NoRouteToHostException
+import java.net.SocketTimeoutException
+import java.net.UnknownHostException
 import java.net.URL
 import java.net.URLEncoder
 import java.util.Calendar
@@ -11,8 +16,11 @@ import java.util.concurrent.TimeUnit
 
 /** V0.6.6: lightweight market-status preflight before scheduled full scans. */
 object MarketStatus {
+    enum class Decision { OK, RETRY, SKIP }
+
     data class Result(
         val ok: Boolean,
+        val decision: Decision,
         val tradingDay: Boolean,
         val inSession: Boolean,
         val reason: String,
@@ -35,6 +43,7 @@ object MarketStatus {
         if (minute !in OPEN_MINUTE..CLOSE_MINUTE) {
             return Result(
                 false,
+                decision = Decision.SKIP,
                 tradingDay = true,
                 inSession = false,
                 reason = if (minute < OPEN_MINUTE) "尚未開盤（09:00前）" else "已超過盤中時段（13:30後）"
@@ -45,7 +54,7 @@ object MarketStatus {
         return try {
             executor.submit<Result> { checkMisApi() }.get(15, TimeUnit.SECONDS)
         } catch (e: Exception) {
-            Result(false, false, true, "市場狀態 API 無法確認：${e.javaClass.simpleName}")
+            Result(false, Decision.RETRY, false, true, "市場狀態 API 暫時無法確認：${rootCauseName(e)}")
         } finally {
             executor.shutdownNow()
         }
@@ -67,21 +76,50 @@ object MarketStatus {
             try {
                 val code = conn.responseCode
                 if (code !in 200..299) {
-                    return Result(false, false, true, "市場狀態 API HTTP $code")
+                    return if (code == 408 || code == 429 || code in 500..599) {
+                        Result(false, Decision.RETRY, false, true, "市場狀態 API 暫時異常：HTTP $code")
+                    } else {
+                        Result(false, Decision.SKIP, false, true, "市場狀態 API HTTP $code，未取得有效行情")
+                    }
                 }
                 val body = conn.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() }
                 val arr = JSONObject(body).optJSONArray("msgArray") ?: JSONArray()
                 val returned = arr.length()
                 if (returned > 0) {
-                    Result(true, true, true, "交易日且 API 有行情回應", sampleReturned = returned)
+                    Result(true, Decision.OK, true, true, "交易日且 API 有行情回應", sampleReturned = returned)
                 } else {
-                    Result(false, false, true, "盤中時間但市場 API 無行情回應；可能休市，跳過完整掃描", sampleReturned = 0)
+                    Result(false, Decision.SKIP, false, true, "盤中時間但市場 API 無行情回應；可能休市，跳過完整掃描", sampleReturned = 0)
                 }
             } finally {
                 conn.disconnect()
             }
         } catch (e: Exception) {
-            Result(false, false, true, "市場狀態 API 無法確認：${e.javaClass.simpleName}")
+            if (isTransientNetworkError(e)) {
+                Result(false, Decision.RETRY, false, true, "市場狀態 API 暫時無法確認：${rootCauseName(e)}")
+            } else {
+                Result(false, Decision.SKIP, false, true, "市場狀態 API 無法確認：${rootCauseName(e)}")
+            }
         }
+    }
+
+    private fun isTransientNetworkError(error: Throwable): Boolean {
+        var e: Throwable? = error
+        while (e != null) {
+            if (
+                e is UnknownHostException ||
+                e is ConnectException ||
+                e is SocketTimeoutException ||
+                e is NoRouteToHostException ||
+                e is InterruptedIOException
+            ) return true
+            e = e.cause
+        }
+        return false
+    }
+
+    private fun rootCauseName(error: Throwable): String {
+        var e = error
+        while (e.cause != null && e.cause !== e) e = e.cause!!
+        return e.javaClass.simpleName
     }
 }
