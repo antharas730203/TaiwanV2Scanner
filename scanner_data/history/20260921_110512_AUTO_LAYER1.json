@@ -1,0 +1,469 @@
+{
+  "scan_time": "20260921_110512",
+  "layer": 1,
+  "strategy": "轉機／動能第一層市場預篩",
+  "score_max": 100,
+  "source_records": 1979,
+  "qualified_count": 24,
+  "top_n": 24,
+  "fundamental_items": "Layer2",
+  "stocks": [
+    {
+      "market": "TWSE",
+      "code": "1710",
+      "name": "東聯",
+      "price": "17.1000",
+      "yesterday": "16.3500",
+      "open": "16.3500",
+      "high": "17.1500",
+      "low": "16.2500",
+      "volume": "4855",
+      "layer1_score": 75,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 4.59%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 1,
+      "_read_index": "STOCK_START_0001"
+    },
+    {
+      "market": "TWSE",
+      "code": "8996",
+      "name": "高力",
+      "price": "1495.0000",
+      "yesterday": "1430.0000",
+      "open": "1430.0000",
+      "high": "1510.0000",
+      "low": "1405.0000",
+      "volume": "1197",
+      "layer1_score": 75,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 4.55%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 2,
+      "_read_index": "STOCK_START_0002"
+    },
+    {
+      "market": "TPEX",
+      "code": "3624",
+      "name": "光頡",
+      "price": "134.5000",
+      "yesterday": "126.0000",
+      "open": "130.0000",
+      "high": "138.0000",
+      "low": "129.0000",
+      "volume": "23998",
+      "layer1_score": 72,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 6.75%，強勢但未過熱",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 3,
+      "_read_index": "STOCK_START_0003"
+    },
+    {
+      "market": "TWSE",
+      "code": "6668",
+      "name": "中揚光",
+      "price": "52.2000",
+      "yesterday": "49.2500",
+      "open": "49.2500",
+      "high": "54.1000",
+      "low": "48.4500",
+      "volume": "14311",
+      "layer1_score": 72,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 5.99%，強勢但未過熱",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 4,
+      "_read_index": "STOCK_START_0004"
+    },
+    {
+      "market": "TWSE",
+      "code": "2367",
+      "name": "燿華",
+      "price": "41.7000",
+      "yesterday": "40.7500",
+      "open": "40.8000",
+      "high": "41.8500",
+      "low": "40.8000",
+      "volume": "2083",
+      "layer1_score": 70,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 2.33%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 5,
+      "_read_index": "STOCK_START_0005"
+    },
+    {
+      "market": "TWSE",
+      "code": "2913",
+      "name": "農林",
+      "price": "11.1500",
+      "yesterday": "10.9000",
+      "open": "11.0000",
+      "high": "11.1500",
+      "low": "11.0000",
+      "volume": "1815",
+      "layer1_score": 70,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 2.29%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 6,
+      "_read_index": "STOCK_START_0006"
+    },
+    {
+      "market": "TWSE",
+      "code": "2605",
+      "name": "新興",
+      "price": "37.4500",
+      "yesterday": "36.1000",
+      "open": "36.7000",
+      "high": "38.2000",
+      "low": "36.1000",
+      "volume": "9910",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.74%，強勢但未過熱",
+        "成交活躍"
+      ],
+      "record_index": 7,
+      "_read_index": "STOCK_START_0007"
+    },
+    {
+      "market": "TPEX",
+      "code": "3580",
+      "name": "友威科",
+      "price": "101.0000",
+      "yesterday": "96.8000",
+      "open": "98.0000",
+      "high": "103.0000",
+      "low": "96.2000",
+      "volume": "1096",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 4.34%，強勢但未過熱",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 8,
+      "_read_index": "STOCK_START_0008"
+    },
+    {
+      "market": "TPEX",
+      "code": "5230",
+      "name": "雷笛克光學",
+      "price": "21.6000",
+      "yesterday": "20.5500",
+      "open": "20.3500",
+      "high": "21.9000",
+      "low": "20.1000",
+      "volume": "1615",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 5.11%，強勢但未過熱",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 9,
+      "_read_index": "STOCK_START_0009"
+    },
+    {
+      "market": "TWSE",
+      "code": "6239",
+      "name": "力成",
+      "price": "293.5000",
+      "yesterday": "284.0000",
+      "open": "286.0000",
+      "high": "295.0000",
+      "low": "286.0000",
+      "volume": "16827",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.35%，強勢但未過熱",
+        "成交活躍"
+      ],
+      "record_index": 10,
+      "_read_index": "STOCK_START_0010"
+    },
+    {
+      "market": "TWSE",
+      "code": "6526",
+      "name": "達發",
+      "price": "723.0000",
+      "yesterday": "691.0000",
+      "open": "700.0000",
+      "high": "734.0000",
+      "low": "688.0000",
+      "volume": "2024",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 4.63%，強勢但未過熱",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 11,
+      "_read_index": "STOCK_START_0011"
+    },
+    {
+      "market": "TWSE",
+      "code": "8215",
+      "name": "明基材",
+      "price": "28.7000",
+      "yesterday": "27.3500",
+      "open": "27.8000",
+      "high": "29.0000",
+      "low": "27.5000",
+      "volume": "3209",
+      "layer1_score": 67,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 4.94%，強勢但未過熱",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 12,
+      "_read_index": "STOCK_START_0012"
+    },
+    {
+      "market": "TWSE",
+      "code": "6142",
+      "name": "友勁",
+      "price": "9.1200",
+      "yesterday": "8.8400",
+      "open": "9.0200",
+      "high": "9.1500",
+      "low": "8.8600",
+      "volume": "457",
+      "layer1_score": 66,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.17%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 13,
+      "_read_index": "STOCK_START_0013"
+    },
+    {
+      "market": "TWSE",
+      "code": "2314",
+      "name": "台揚",
+      "price": "11.0500",
+      "yesterday": "10.7000",
+      "open": "10.6500",
+      "high": "11.0500",
+      "low": "10.6500",
+      "volume": "75",
+      "layer1_score": 65,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.27%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 14,
+      "_read_index": "STOCK_START_0014"
+    },
+    {
+      "market": "TWSE",
+      "code": "2328",
+      "name": "廣宇",
+      "price": "47.7500",
+      "yesterday": "46.4000",
+      "open": "46.8000",
+      "high": "48.1500",
+      "low": "46.2000",
+      "volume": "2276",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.91%，強勢但未過熱"
+      ],
+      "record_index": 15,
+      "_read_index": "STOCK_START_0015"
+    },
+    {
+      "market": "TPEX",
+      "code": "3260",
+      "name": "威剛",
+      "price": "390.0000",
+      "yesterday": "378.5000",
+      "open": "385.5000",
+      "high": "392.0000",
+      "low": "383.0000",
+      "volume": "3296",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.04%，強勢但未過熱"
+      ],
+      "record_index": 16,
+      "_read_index": "STOCK_START_0016"
+    },
+    {
+      "market": "TPEX",
+      "code": "3680",
+      "name": "家登",
+      "price": "544.0000",
+      "yesterday": "533.0000",
+      "open": "536.0000",
+      "high": "550.0000",
+      "low": "531.0000",
+      "volume": "1051",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.06%，強勢但未過熱"
+      ],
+      "record_index": 17,
+      "_read_index": "STOCK_START_0017"
+    },
+    {
+      "market": "TWSE",
+      "code": "4540",
+      "name": "全球傳動",
+      "price": "61.2000",
+      "yesterday": "59.3000",
+      "open": "59.6000",
+      "high": "61.9000",
+      "low": "58.7000",
+      "volume": "2651",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.20%，強勢但未過熱"
+      ],
+      "record_index": 18,
+      "_read_index": "STOCK_START_0018"
+    },
+    {
+      "market": "TWSE",
+      "code": "6153",
+      "name": "嘉聯益",
+      "price": "17.4000",
+      "yesterday": "17.0000",
+      "open": "17.1000",
+      "high": "17.5000",
+      "low": "17.0000",
+      "volume": "1183",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.35%，強勢但未過熱"
+      ],
+      "record_index": 19,
+      "_read_index": "STOCK_START_0019"
+    },
+    {
+      "market": "TPEX",
+      "code": "3499",
+      "name": "環天科",
+      "price": "13.8000",
+      "yesterday": "13.3000",
+      "open": "13.5000",
+      "high": "13.8000",
+      "low": "13.3500",
+      "volume": "36",
+      "layer1_score": 60,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.76%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 20,
+      "_read_index": "STOCK_START_0020"
+    },
+    {
+      "market": "TPEX",
+      "code": "6423",
+      "name": "億而得",
+      "price": "85.6000",
+      "yesterday": "81.8000",
+      "open": "83.7000",
+      "high": "85.6000",
+      "low": "83.3000",
+      "volume": "31",
+      "layer1_score": 60,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 4.65%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 21,
+      "_read_index": "STOCK_START_0021"
+    },
+    {
+      "market": "TWSE",
+      "code": "7721",
+      "name": "微程式",
+      "price": "62.3000",
+      "yesterday": "60.6000",
+      "open": "61.2000",
+      "high": "62.3000",
+      "low": "61.2000",
+      "volume": "35",
+      "layer1_score": 60,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.81%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 22,
+      "_read_index": "STOCK_START_0022"
+    },
+    {
+      "market": "TWSE",
+      "code": "1809",
+      "name": "中釉",
+      "price": "39.4000",
+      "yesterday": "38.6000",
+      "open": "38.6000",
+      "high": "39.9000",
+      "low": "38.2000",
+      "volume": "950",
+      "layer1_score": 58,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.07%，強勢但未過熱"
+      ],
+      "record_index": 23,
+      "_read_index": "STOCK_START_0023"
+    },
+    {
+      "market": "TWSE",
+      "code": "2891",
+      "name": "中信金",
+      "price": "70.2000",
+      "yesterday": "69.5000",
+      "open": "69.5000",
+      "high": "70.5000",
+      "low": "69.0000",
+      "volume": "8864",
+      "layer1_score": 57,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 1.01%，偏強",
+        "成交活躍"
+      ],
+      "record_index": 24,
+      "_read_index": "STOCK_START_0024"
+    }
+  ],
+  "read_unit": 6000,
+  "read_rule": "max_6000_chars_per_read; use _read_index boundaries when available"
+}
