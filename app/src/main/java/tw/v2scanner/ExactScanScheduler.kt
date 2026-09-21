@@ -338,53 +338,48 @@ class ScheduledAutoUploadWorker(appContext: Context, params: WorkerParameters) :
             .putBoolean("github_auto_upload", false)
             .putString("scan_origin", "scheduled")
             .apply()
-        val now = Calendar.getInstance()
-        val minute = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
-        if (minute > 13 * 60 + 30) {
-            ScheduleDiagnostics.mark(applicationContext, "last_worker_expired", "超過13:30，等待網路的本輪排程不再執行")
-            historyId?.let {
-                ScheduleDiagnosticsHistory.update(
-                    applicationContext,
-                    it,
-                    "EXPIRED_WAITING_NETWORK",
-                    "reason",
-                    "等待網路期間已超過盤中有效時間 13:30"
-                )
-            }
-            return Result.success()
-        }
-
-        val marketStatus = MarketStatus.check(now)
-        ScheduleDiagnostics.mark(applicationContext, "last_market_status", marketStatus.reason)
-        ScheduleDiagnostics.mark(applicationContext, "last_market_status_source", marketStatus.source)
-        ScheduleDiagnostics.mark(applicationContext, "last_market_status_sample", marketStatus.sampleReturned.toString())
-
-        when (marketStatus.decision) {
-            MarketStatus.Decision.RETRY -> {
-                ScheduleDiagnostics.mark(applicationContext, "last_schedule_wait", marketStatus.reason)
+        return try {
+            val now = Calendar.getInstance()
+            val minute = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE)
+            if (minute > 13 * 60 + 30) {
+                ScheduleDiagnostics.mark(applicationContext, "last_worker_expired", "超過13:30，等待網路的本輪排程不再執行")
                 historyId?.let {
-                    ScheduleDiagnosticsHistory.update(applicationContext, it, "WAIT_NETWORK", "market_status", marketStatus.reason)
-                    ScheduleDiagnosticsHistory.update(applicationContext, it, key = "network", value = NetworkState.summary(applicationContext))
-                }
-                return Result.retry()
-            }
-            MarketStatus.Decision.SKIP -> {
-                val status = if (!marketStatus.inSession && minute > 13 * 60 + 30) {
-                    "EXPIRED_WAITING_NETWORK"
-                } else {
-                    "SKIPPED"
-                }
-                historyId?.let {
-                    ScheduleDiagnosticsHistory.update(applicationContext, it, status, "market_status", marketStatus.reason)
+                    ScheduleDiagnosticsHistory.update(
+                        applicationContext,
+                        it,
+                        "EXPIRED_WAITING_NETWORK",
+                        "reason",
+                        "等待網路期間已超過盤中有效時間 13:30"
+                    )
                 }
                 return Result.success()
             }
-            MarketStatus.Decision.OK -> Unit
-        }
 
-        ScheduleDiagnostics.mark(applicationContext, "last_worker_started")
-        historyId?.let { ScheduleDiagnosticsHistory.update(applicationContext, it, "STARTED") }
-        return try {
+            val marketStatus = MarketStatus.check(now)
+            ScheduleDiagnostics.mark(applicationContext, "last_market_status", marketStatus.reason)
+            ScheduleDiagnostics.mark(applicationContext, "last_market_status_source", marketStatus.source)
+            ScheduleDiagnostics.mark(applicationContext, "last_market_status_sample", marketStatus.sampleReturned.toString())
+
+            when (marketStatus.decision) {
+                MarketStatus.Decision.RETRY -> {
+                    ScheduleDiagnostics.mark(applicationContext, "last_schedule_wait", marketStatus.reason)
+                    historyId?.let {
+                        ScheduleDiagnosticsHistory.update(applicationContext, it, "WAIT_NETWORK", "market_status", marketStatus.reason)
+                        ScheduleDiagnosticsHistory.update(applicationContext, it, key = "network", value = NetworkState.summary(applicationContext))
+                    }
+                    return Result.retry()
+                }
+                MarketStatus.Decision.SKIP -> {
+                    historyId?.let {
+                        ScheduleDiagnosticsHistory.update(applicationContext, it, "SKIPPED", "market_status", marketStatus.reason)
+                    }
+                    return Result.success()
+                }
+                MarketStatus.Decision.OK -> Unit
+            }
+
+            ScheduleDiagnostics.mark(applicationContext, "last_worker_started")
+            historyId?.let { ScheduleDiagnosticsHistory.update(applicationContext, it, "STARTED") }
             val report = ScanEngine.runFull(applicationContext)
             ScheduleDiagnostics.mark(applicationContext, "last_worker_finished")
             applicationContext.getSharedPreferences("diagnostics", 0).edit()
