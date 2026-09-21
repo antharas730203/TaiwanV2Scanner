@@ -83,10 +83,19 @@
 
 - Update `versionName` and `versionCode` intentionally.
 - Any installable update over an existing release must have a higher `versionCode` and the same release signing identity.
-- Current version: V0.8.5 / versionCode 21.
+- Current version: V0.8.8 / versionCode 24.
 - Do not claim a new APK is ready until CI has verified the Release APK.
 
-## 8. UI changes
+## 8. Scheduling / temporary network recovery
+
+- `MarketStatus` uses `OK`, `RETRY`, and `SKIP`; transient network/API failures must remain retryable.
+- For scheduled trading scans, a transient network failure must record `WAIT_NETWORK` and enqueue WorkManager with `NetworkType.CONNECTED`.
+- The worker must re-check market status before scanning and return retry while the failure remains transient.
+- Waiting intraday work must expire after 13:30 as `EXPIRED_WAITING_NETWORK`; it must not execute after the trading session.
+- Confirmed non-session / no-market-response cases remain `SKIPPED`.
+- Preserve test-mode scheduled scan behavior and scheduler-state restoration when changing this path.
+
+## 9. UI changes
 
 - Keep the main screen clean and focused on operation.
 - Version and feature descriptions belong in `關於`.
@@ -94,7 +103,7 @@
 - Main screen actions currently include manual scan, GitHub verification, JSON export/upload and schedule diagnostics.
 - Do not modify scanning behavior while making UI-only changes.
 
-## 9. Build verification
+## 10. Build verification
 
 After any code change:
 
@@ -111,17 +120,17 @@ After any code change:
 
 Only after all applicable checks pass may the AI report the build as successful.
 
-## 10. Do not expose secrets in diagnostics
+## 11. Do not expose secrets in diagnostics
 
 Diagnostics may report whether a credential is configured, but must never display the credential itself, keystore passwords, or secret contents.
 
-## 11. Preserve working history
+## 12. Preserve working history
 
 - Do not delete historical source just to make the repository look cleaner.
 - Do not delete working versions, backups, or records without explicit approval.
 - Prefer small, traceable commits.
 
-## 12. Failure handling
+## 13. Failure handling
 
 If a build fails:
 
