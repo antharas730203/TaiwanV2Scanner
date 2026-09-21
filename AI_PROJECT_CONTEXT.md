@@ -8,8 +8,8 @@
 - Repository: `antharas730203/TaiwanV2Scanner`
 - Default branch: `main`
 - Package / applicationId: `tw.v2scanner`
-- Current development version: **V0.8.5 / versionCode 21**
-- Previous verified baseline: V0.8.4 / versionCode 20
+- Current development version: **V0.8.8 / versionCode 24**
+- Previous verified baseline: V0.8.5 / versionCode 21
 - Historical stable baseline: V0.6.8
 
 ## 2. Scope
@@ -96,7 +96,19 @@ Post-market scheduling is independent from the intraday schedule.
 - No separate persistent status file is required.
 - Post-market scheduling is restored after device reboot.
 
-## 8. GitHub credentials and signing — critical
+## 8. Scheduling / temporary network recovery
+
+- Intraday exact alarms remain `09:05,10:05,11:05,12:05,13:05`; post-market scheduling remains independent.
+- `MarketStatus` distinguishes `OK`, `RETRY`, and `SKIP`.
+- Temporary network/API failures such as `UnknownHostException`, `ConnectException`, `SocketTimeoutException`, `NoRouteToHostException` and related interrupted I/O are retryable and must not be treated as confirmed market/session skips.
+- A scheduled trading scan that receives a transient network failure is recorded as `WAIT_NETWORK` and handed to WorkManager with `NetworkType.CONNECTED`.
+- The scheduled worker re-checks market status before scanning and retries while the failure remains transient.
+- A waiting intraday scan that reaches after 13:30 is recorded as `EXPIRED_WAITING_NETWORK` and must not execute after the intraday session.
+- Confirmed non-session / no-market-response cases remain `SKIPPED`.
+- Network-recovery diagnostics record the actual market-status reason and current network summary.
+- Test-mode scheduled scan behavior and scheduler-state restoration must remain intact.
+
+## 9. GitHub credentials and signing — critical
 
 Never put real tokens, passwords, keystore contents, or secret values in source control or AI documentation.
 
@@ -115,7 +127,7 @@ The workflow creates `keystore.properties`, builds Release, verifies the APK sig
 
 Any future version update must preserve this signing setup so V0.8.x/V0.9.x updates can install over the existing signed App.
 
-## 9. Scheduling diagnostics
+## 10. Scheduling diagnostics
 
 `ScheduleDiagnosticsHistory` keeps a rolling history of up to 35 schedule events in SharedPreferences.
 
@@ -128,7 +140,7 @@ History can show trigger time, configured schedule, status, index, mode, alarm/n
 
 This history is intended to diagnose missing scheduled scans and upload gaps. It must not expose tokens or secret values.
 
-## 10. Current UI direction
+## 11. Current UI direction
 
 Main screen should be clean:
 
@@ -156,9 +168,9 @@ Drawer requirements:
 - Keyboard must not obscure schedule time input.
 - Keep clear spacing between sections and expanded controls.
 
-## 11. About section
+## 12. About section
 
-Current intended version: **V0.8.5**.
+Current intended version: **V0.8.8**.
 
 Feature descriptions include:
 
@@ -174,7 +186,7 @@ Feature descriptions include:
 
 Do not put strategy details here; only describe the App's implemented role.
 
-## 12. Display wording
+## 13. Display wording
 
 Prefer user-friendly status wording. For example:
 
@@ -182,7 +194,7 @@ Prefer user-friendly status wording. For example:
 - `最大批次字元` should be interpreted/displayed as `最大檔案字元` when it represents the largest exported JSON size, not an API batch size.
 - Avoid exposing internal implementation names unless useful for diagnostics.
 
-## 13. Safe development procedure
+## 14. Safe development procedure
 
 Before modifying code:
 
@@ -203,7 +215,7 @@ After modifying code:
 6. Verify package, versionName and versionCode.
 7. Only then report the build as successful.
 
-## 14. Historical safety notes
+## 15. Historical safety notes
 
 - V0.6.8 is the last known-good historical baseline.
 - Do not delete useful historical source merely to clean up the repository.
