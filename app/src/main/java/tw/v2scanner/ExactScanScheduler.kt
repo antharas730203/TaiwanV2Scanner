@@ -169,34 +169,27 @@ class ExactScanAlarmReceiver : BroadcastReceiver() {
         if (prefs.getBoolean("auto", false)) {
             ScheduleDiagnostics.mark(context, "last_schedule_mode", mode)
             if (mode == "trading") {
-                val marketStatus = MarketStatus.check()
-                ScheduleDiagnostics.mark(context, "last_market_status", marketStatus.reason)
-                ScheduleDiagnostics.mark(context, "last_market_status_source", marketStatus.source)
-                ScheduleDiagnostics.mark(context, "last_market_status_sample", marketStatus.sampleReturned.toString())
-                when (marketStatus.decision) {
-                    MarketStatus.Decision.OK -> {
-                        historyId?.let {
-                            ScheduleDiagnosticsHistory.update(context, it, "QUEUED", "market_status", marketStatus.reason)
-                            ScheduleDiagnosticsHistory.update(context, it, key = "api_sample", value = marketStatus.sampleReturned.toString())
-                        }
-                        enqueueScan(context, historyId)
-                    }
-                    MarketStatus.Decision.RETRY -> {
-                        ScheduleDiagnostics.mark(context, "last_schedule_wait", marketStatus.reason)
-                        historyId?.let {
-                            ScheduleDiagnosticsHistory.update(context, it, "WAIT_NETWORK", "market_status", marketStatus.reason)
-                            ScheduleDiagnosticsHistory.update(context, it, key = "api_sample", value = marketStatus.sampleReturned.toString())
-                        }
-                        enqueueScan(context, historyId)
-                    }
-                    MarketStatus.Decision.SKIP -> {
-                        ScheduleDiagnostics.mark(context, "last_schedule_skip", marketStatus.reason)
-                        historyId?.let {
-                            ScheduleDiagnosticsHistory.update(context, it, "SKIPPED", "market_status", marketStatus.reason)
-                            ScheduleDiagnosticsHistory.update(context, it, key = "api_sample", value = marketStatus.sampleReturned.toString())
-                        }
-                    }
+                // Do not probe the market API inside the alarm receiver. If the
+                // device is waking from Doze or the network is still reconnecting,
+                // hand this exact schedule round to WorkManager immediately.
+                // The worker waits for CONNECTED and then performs the authoritative
+                // MarketStatus check before scanning.
+                historyId?.let {
+                    ScheduleDiagnosticsHistory.update(
+                        context,
+                        it,
+                        "QUEUED",
+                        "market_status",
+                        "排程觸發後交由 WorkManager 等待網路，再確認市場狀態"
+                    )
+                    ScheduleDiagnosticsHistory.update(
+                        context,
+                        it,
+                        key = "network_at_trigger",
+                        value = network
+                    )
                 }
+                enqueueScan(context, historyId)
             } else {
                 historyId?.let { ScheduleDiagnosticsHistory.update(context, it, "QUEUED") }
                 enqueueScan(context, historyId)
@@ -228,8 +221,12 @@ class ExactScanAlarmReceiver : BroadcastReceiver() {
             )
             .addTag("taiwan_v2_scheduled_scan_exact")
             .build()
+        // Each scheduled round gets an independent WorkManager chain.
+        // This prevents a waiting round from being chained behind another intraday schedule.
+        val uniqueName = historyId?.let { "taiwan_v2_scheduled_scan_exact_" + it }
+            ?: "taiwan_v2_scheduled_scan_exact_" + System.currentTimeMillis()
         WorkManager.getInstance(context).enqueueUniqueWork(
-            "taiwan_v2_scheduled_scan_exact",
+            uniqueName,
             ExistingWorkPolicy.APPEND_OR_REPLACE,
             request
         )
