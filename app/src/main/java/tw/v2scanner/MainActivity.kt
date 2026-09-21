@@ -186,7 +186,7 @@ class MainActivity : Activity() {
 
         panel.addView(sectionHeader("關於"), actionParams(12))
         val aboutBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE; setPadding(0, dp(8), 0, dp(12)) }
-        aboutBox.addView(TextView(this).apply { text = "V0.8.7"; textSize = 18f; setTextColor(Color.WHITE) })
+        aboutBox.addView(TextView(this).apply { text = "V0.8.8"; textSize = 18f; setTextColor(Color.WHITE) })
         aboutBox.addView(TextView(this).apply { text = "台股 V2 掃描器\n完整 TWSE＋TPEX 市場掃描\n第一層轉機／動能市場預篩\nExact Alarm 精確排程\n獨立盤後排程\n排程歷史診斷\nGitHub JSON 歸檔\n手動／排程上傳支援\nTWSE、TPEX、LAYER1 三份完整資料"; textSize = 14f; setTextColor(Color.LTGRAY); setPadding(0, dp(6), 0, 0) })
         panel.addView(aboutBox); attachExpandable(panel, aboutBox)
 
