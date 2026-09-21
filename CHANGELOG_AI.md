@@ -1,3 +1,10 @@
+## V0.8.9 — 2026-09-21
+- Intraday exact-alarm receiver now queues trading scans immediately instead of probing the market API before WorkManager.
+- WorkManager NetworkType.CONNECTED waits for network availability; the worker then re-checks MarketStatus before scanning.
+- Each intraday schedule round uses an independent unique WorkManager name based on schedule history ID, avoiding cross-round chaining.
+- Added ACCESS_NETWORK_STATE for network diagnostics.
+- ScannerCore, TWSE/TPEX acquisition, JSON/archive format, GitHub upload, scan times, and 5314 monitoring remain unchanged.
+
 # TaiwanV2Scanner — AI Change Log
 
 ## V0.8.8 — 2026-09-21
