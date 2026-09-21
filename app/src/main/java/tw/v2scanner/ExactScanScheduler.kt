@@ -355,27 +355,30 @@ class ScheduledAutoUploadWorker(appContext: Context, params: WorkerParameters) :
                 return Result.success()
             }
 
-            val marketStatus = MarketStatus.check(now)
-            ScheduleDiagnostics.mark(applicationContext, "last_market_status", marketStatus.reason)
-            ScheduleDiagnostics.mark(applicationContext, "last_market_status_source", marketStatus.source)
-            ScheduleDiagnostics.mark(applicationContext, "last_market_status_sample", marketStatus.sampleReturned.toString())
+            val mode = prefs.getString("schedule_mode", "trading") ?: "trading"
+            if (mode == "trading") {
+                val marketStatus = MarketStatus.check(now)
+                ScheduleDiagnostics.mark(applicationContext, "last_market_status", marketStatus.reason)
+                ScheduleDiagnostics.mark(applicationContext, "last_market_status_source", marketStatus.source)
+                ScheduleDiagnostics.mark(applicationContext, "last_market_status_sample", marketStatus.sampleReturned.toString())
 
-            when (marketStatus.decision) {
-                MarketStatus.Decision.RETRY -> {
-                    ScheduleDiagnostics.mark(applicationContext, "last_schedule_wait", marketStatus.reason)
-                    historyId?.let {
-                        ScheduleDiagnosticsHistory.update(applicationContext, it, "WAIT_NETWORK", "market_status", marketStatus.reason)
-                        ScheduleDiagnosticsHistory.update(applicationContext, it, key = "network", value = NetworkState.summary(applicationContext))
+                when (marketStatus.decision) {
+                    MarketStatus.Decision.RETRY -> {
+                        ScheduleDiagnostics.mark(applicationContext, "last_schedule_wait", marketStatus.reason)
+                        historyId?.let {
+                            ScheduleDiagnosticsHistory.update(applicationContext, it, "WAIT_NETWORK", "market_status", marketStatus.reason)
+                            ScheduleDiagnosticsHistory.update(applicationContext, it, key = "network", value = NetworkState.summary(applicationContext))
+                        }
+                        return Result.retry()
                     }
-                    return Result.retry()
-                }
-                MarketStatus.Decision.SKIP -> {
-                    historyId?.let {
-                        ScheduleDiagnosticsHistory.update(applicationContext, it, "SKIPPED", "market_status", marketStatus.reason)
+                    MarketStatus.Decision.SKIP -> {
+                        historyId?.let {
+                            ScheduleDiagnosticsHistory.update(applicationContext, it, "SKIPPED", "market_status", marketStatus.reason)
+                        }
+                        return Result.success()
                     }
-                    return Result.success()
+                    MarketStatus.Decision.OK -> Unit
                 }
-                MarketStatus.Decision.OK -> Unit
             }
 
             ScheduleDiagnostics.mark(applicationContext, "last_worker_started")
