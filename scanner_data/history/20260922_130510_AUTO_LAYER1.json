@@ -1,0 +1,132 @@
+{
+  "scan_time": "20260922_130510",
+  "layer": 1,
+  "strategy": "轉機／動能第一層市場預篩",
+  "score_max": 100,
+  "source_records": 1541,
+  "qualified_count": 6,
+  "top_n": 6,
+  "fundamental_items": "Layer2",
+  "stocks": [
+    {
+      "market": "TWSE",
+      "code": "2305",
+      "name": "全友",
+      "price": "59.8000",
+      "yesterday": "58.8000",
+      "open": "57.5000",
+      "high": "60.0000",
+      "low": "56.8000",
+      "volume": "5987",
+      "layer1_score": 70,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 1.70%，偏強",
+        "位於日內高檔",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 1,
+      "_read_index": "STOCK_START_0001"
+    },
+    {
+      "market": "TPEX",
+      "code": "5439",
+      "name": "高技",
+      "price": "254.5000",
+      "yesterday": "245.0000",
+      "open": "247.5000",
+      "high": "255.0000",
+      "low": "247.0000",
+      "volume": "1286",
+      "layer1_score": 70,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 3.88%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 2,
+      "_read_index": "STOCK_START_0002"
+    },
+    {
+      "market": "TPEX",
+      "code": "4966",
+      "name": "譜瑞-KY",
+      "price": "585.0000",
+      "yesterday": "567.0000",
+      "open": "570.0000",
+      "high": "586.0000",
+      "low": "569.0000",
+      "volume": "917",
+      "layer1_score": 66,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.17%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 3,
+      "_read_index": "STOCK_START_0003"
+    },
+    {
+      "market": "TWSE",
+      "code": "2241",
+      "name": "艾姆勒",
+      "price": "40.5500",
+      "yesterday": "37.3500",
+      "open": "38.0000",
+      "high": "41.0500",
+      "low": "36.8500",
+      "volume": "5774",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 8.57%，強但開始追價",
+        "位於日內高檔",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 4,
+      "_read_index": "STOCK_START_0004"
+    },
+    {
+      "market": "TPEX",
+      "code": "3467",
+      "name": "台灣精材",
+      "price": "84.4000",
+      "yesterday": "77.4000",
+      "open": "77.7000",
+      "high": "85.0000",
+      "low": "77.7000",
+      "volume": "1202",
+      "layer1_score": 57,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 9.04%，強但開始追價",
+        "位於日內高檔",
+        "相對開盤價明顯轉強"
+      ],
+      "record_index": 5,
+      "_read_index": "STOCK_START_0005"
+    },
+    {
+      "market": "TWSE",
+      "code": "4927",
+      "name": "泰鼎-KY",
+      "price": "43.3500",
+      "yesterday": "42.0500",
+      "open": "42.7500",
+      "high": "44.1000",
+      "low": "42.7000",
+      "volume": "3240",
+      "layer1_score": 56,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 3.09%，強勢但未過熱"
+      ],
+      "record_index": 6,
+      "_read_index": "STOCK_START_0006"
+    }
+  ],
+  "read_unit": 6000,
+  "read_rule": "max_6000_chars_per_read; use _read_index boundaries when available"
+}
