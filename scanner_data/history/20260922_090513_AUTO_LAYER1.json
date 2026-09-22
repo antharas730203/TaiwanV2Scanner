@@ -1,0 +1,111 @@
+{
+  "scan_time": "20260922_090513",
+  "layer": 1,
+  "strategy": "轉機／動能第一層市場預篩",
+  "score_max": 100,
+  "source_records": 1982,
+  "qualified_count": 5,
+  "top_n": 5,
+  "fundamental_items": "Layer2",
+  "stocks": [
+    {
+      "market": "TWSE",
+      "code": "4958",
+      "name": "臻鼎-KY",
+      "price": "501.0000",
+      "yesterday": "470.0000",
+      "open": "480.0000",
+      "high": "501.0000",
+      "low": "480.0000",
+      "volume": "7465",
+      "layer1_score": 80,
+      "layer1_action": "第一層通過",
+      "reasons": [
+        "日漲幅 6.60%，強勢但未過熱",
+        "位於日內高檔",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 1,
+      "_read_index": "STOCK_START_0001"
+    },
+    {
+      "market": "TWSE",
+      "code": "3189",
+      "name": "景碩",
+      "price": "902.0000",
+      "yesterday": "827.0000",
+      "open": "875.0000",
+      "high": "905.0000",
+      "low": "875.0000",
+      "volume": "6659",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 9.07%，強但開始追價",
+        "位於日內高檔",
+        "相對開盤價明顯轉強",
+        "成交活躍"
+      ],
+      "record_index": 2,
+      "_read_index": "STOCK_START_0002"
+    },
+    {
+      "market": "TWSE",
+      "code": "4919",
+      "name": "新唐",
+      "price": "128.5000",
+      "yesterday": "125.5000",
+      "open": "127.0000",
+      "high": "129.0000",
+      "low": "126.5000",
+      "volume": "1166",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.39%，強勢但未過熱"
+      ],
+      "record_index": 3,
+      "_read_index": "STOCK_START_0003"
+    },
+    {
+      "market": "TWSE",
+      "code": "6239",
+      "name": "力成",
+      "price": "300.0000",
+      "yesterday": "292.5000",
+      "open": "296.0000",
+      "high": "301.5000",
+      "low": "295.0000",
+      "volume": "3308",
+      "layer1_score": 62,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.56%，強勢但未過熱"
+      ],
+      "record_index": 4,
+      "_read_index": "STOCK_START_0004"
+    },
+    {
+      "market": "TWSE",
+      "code": "3346",
+      "name": "麗清",
+      "price": "25.0000",
+      "yesterday": "24.5000",
+      "open": "24.8000",
+      "high": "25.0000",
+      "low": "24.0000",
+      "volume": "890",
+      "layer1_score": 56,
+      "layer1_action": "第一層觀察",
+      "reasons": [
+        "日漲幅 2.04%，強勢但未過熱",
+        "位於日內高檔"
+      ],
+      "record_index": 5,
+      "_read_index": "STOCK_START_0005"
+    }
+  ],
+  "read_unit": 6000,
+  "read_rule": "max_6000_chars_per_read; use _read_index boundaries when available"
+}
