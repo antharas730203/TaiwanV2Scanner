@@ -8,7 +8,7 @@
 - Repository: `antharas730203/TaiwanV2Scanner`
 - Default branch: `main`
 - Package / applicationId: `tw.v2scanner`
-- Current development version: **V0.9.0 / versionCode 26**
+- Current development version: **V0.9.1 / versionCode 27**
 - Previous verified baseline: V0.8.5 / versionCode 21
 - Historical stable baseline: V0.6.8
 
@@ -170,7 +170,7 @@ Drawer requirements:
 
 ## 12. About section
 
-Current intended version: **V0.9.0**.
+Current intended version: **V0.9.1**.
 
 Feature descriptions include:
 
@@ -238,3 +238,15 @@ After modifying code:
 - The App uses Android Storage Access Framework persisted tree permission; no Google credential or OAuth token is stored in source.
 - Manual and scheduled archive naming and TWSE/TPEX/LAYER1 JSON structure remain unchanged.
 - GitHub remains the source-code/version repository only.
+
+
+### V0.9.1 replaceable Layer1 logic
+- Layer1 strategy is no longer hard-coded in the scanner implementation.
+- The App stores one active declarative JSON rule set in SharedPreferences key `layer1_logic_json`.
+- The drawer provides an `L1 邏輯區` editor, validation-before-save, and restore-default action.
+- Pasted logic is data only: the App does not execute Kotlin, Java, JavaScript, or arbitrary scripts.
+- Supported V1 metrics are limited to realtime fields already available to Layer1: `change_pct`, `day_position`, `from_open_pct`, and `volume`.
+- Invalid logic must stop Layer1 generation with an explicit error; never generate a fake LAYER1.
+- LAYER1 JSON records `strategy_name`, `logic_version`, `logic_updated`, and `logic_schema_version` for reproducible backtesting.
+- Layer2 fundamentals/themes and Layer3 entry/Fibonacci analysis remain outside the App Layer1 engine.
+- The default V1.0 JSON reproduces the previous hard-coded Layer1 scoring; this architecture change does not intentionally redesign the strategy.
