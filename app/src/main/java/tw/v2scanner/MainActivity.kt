@@ -159,6 +159,18 @@ class MainActivity : Activity() {
         driveBox.addView(roundButton("選擇 Google Drive history 資料夾", 50, true).apply { setOnClickListener { chooseDriveFolder() } }, actionParams(4))
         panel.addView(driveBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) }); attachExpandable(panel, driveBox)
 
+        panel.addView(sectionHeader("L1 邏輯區"), actionParams(12))
+        val logicBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        logicBox.addView(TextView(this).apply {
+            val current = prefs.getString(Layer1RuleEngine.PREF_KEY, null) ?: Layer1RuleEngine.DEFAULT_LOGIC
+            val v = Layer1RuleEngine.validate(current)
+            text = if (v.ok) "目前生效：${v.meta!!.strategyName} / ${v.meta.logicVersion} / ${v.meta.logicUpdated}" else "目前邏輯異常：${v.message}"
+            textSize = 14f; setTextColor(Color.LTGRAY); setPadding(0, dp(6), 0, dp(8))
+        })
+        logicBox.addView(roundButton("編輯／貼上 L1 邏輯", 50, true).apply { setOnClickListener { showLayer1LogicEditor() } }, actionParams(4))
+        logicBox.addView(roundButton("恢復預設 L1 邏輯", 46, false).apply { setOnClickListener { restoreDefaultLayer1Logic() } }, actionParams(8))
+        panel.addView(logicBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) }); attachExpandable(panel, logicBox)
+
         panel.addView(sectionHeader("自動排程"), actionParams(12))
         val scheduleBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
         auto = CheckBox(this).apply { text = "啟用自動排程"; isChecked = prefs.getBoolean("auto", false); setTextColor(Color.WHITE) }
@@ -181,8 +193,8 @@ class MainActivity : Activity() {
 
         panel.addView(sectionHeader("關於"), actionParams(12))
         val aboutBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE; setPadding(0, dp(8), 0, dp(12)) }
-        aboutBox.addView(TextView(this).apply { text = "V0.9.0"; textSize = 18f; setTextColor(Color.WHITE) })
-        aboutBox.addView(TextView(this).apply { text = "台股 V2 掃描器\n完整 TWSE＋TPEX 市場掃描\n第一層轉機／動能市場預篩\nExact Alarm 精確排程\n獨立盤後排程\n排程歷史診斷\nGoogle Drive JSON 歸檔\n手動／排程上傳支援\nTWSE、TPEX、LAYER1 三份完整資料"; textSize = 14f; setTextColor(Color.LTGRAY); setPadding(0, dp(6), 0, 0) })
+        aboutBox.addView(TextView(this).apply { text = "V0.9.1"; textSize = 18f; setTextColor(Color.WHITE) })
+        aboutBox.addView(TextView(this).apply { text = "台股 V2 掃描器\n完整 TWSE＋TPEX 市場掃描\n可替換式 L1 規則引擎\nExact Alarm 精確排程\n獨立盤後排程\n排程歷史診斷\nGoogle Drive JSON 歸檔\n手動／排程上傳支援\nTWSE、TPEX、LAYER1 三份完整資料"; textSize = 14f; setTextColor(Color.LTGRAY); setPadding(0, dp(6), 0, 0) })
         panel.addView(aboutBox); attachExpandable(panel, aboutBox)
 
         val scroll = ScrollView(this).apply { isVerticalScrollBarEnabled = true; scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY; setScrollbarFadingEnabled(true); scrollBarFadeDuration = 180; scrollBarDefaultDelayBeforeFade = 500; setScrollBarSize(dp(4)); setFillViewport(true); overScrollMode = View.OVER_SCROLL_NEVER; addView(panel) }
@@ -228,6 +240,61 @@ class MainActivity : Activity() {
             result.text = "Google Drive 設定失敗：${e.javaClass.simpleName}\n${e.message ?: "無詳細訊息"}"
             Toast.makeText(this, "無法保存 Google Drive 資料夾權限", Toast.LENGTH_LONG).show()
         }
+    }
+
+    private fun showLayer1LogicEditor() {
+        val current = prefs.getString(Layer1RuleEngine.PREF_KEY, null) ?: Layer1RuleEngine.DEFAULT_LOGIC
+        val editor = EditText(this).apply {
+            setText(current)
+            textSize = 12f
+            setTextColor(Color.WHITE)
+            setHintTextColor(Color.GRAY)
+            gravity = Gravity.TOP or Gravity.START
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+            setPadding(dp(12), dp(12), dp(12), dp(12))
+            background = cardBackground()
+            minLines = 18
+        }
+        val scroll = ScrollView(this).apply { addView(editor); setPadding(dp(8), dp(8), dp(8), dp(8)) }
+        val dialog = AlertDialog.Builder(this)
+            .setTitle("L1 邏輯區")
+            .setMessage("只接受安全的 JSON 規則格式，不會執行 Kotlin／Java 程式碼。儲存成功後，下一次掃描立即使用。")
+            .setView(scroll)
+            .setPositiveButton("驗證並儲存", null)
+            .setNegativeButton("取消", null)
+            .create()
+        dialog.setOnShowListener {
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+                val text = editor.text.toString().trim()
+                val validation = Layer1RuleEngine.validate(text)
+                if (!validation.ok) {
+                    Toast.makeText(this, "L1 邏輯錯誤：${validation.message}", Toast.LENGTH_LONG).show()
+                    return@setOnClickListener
+                }
+                prefs.edit().putString(Layer1RuleEngine.PREF_KEY, text).apply()
+                getSharedPreferences("diagnostics", 0).edit()
+                    .putString("layer1_logic_status", validation.message)
+                    .apply()
+                Toast.makeText(this, "L1 邏輯已儲存，下一次掃描生效", Toast.LENGTH_LONG).show()
+                dialog.dismiss()
+                showMain()
+            }
+        }
+        dialog.show()
+        dialog.window?.setLayout((resources.displayMetrics.widthPixels * 0.96).toInt(), (resources.displayMetrics.heightPixels * 0.88).toInt())
+    }
+
+    private fun restoreDefaultLayer1Logic() {
+        AlertDialog.Builder(this)
+            .setTitle("恢復預設 L1 邏輯")
+            .setMessage("會以內建的「轉機＋動能 V1.0」覆蓋目前 L1 邏輯。")
+            .setPositiveButton("恢復") { _, _ ->
+                prefs.edit().putString(Layer1RuleEngine.PREF_KEY, Layer1RuleEngine.DEFAULT_LOGIC).apply()
+                Toast.makeText(this, "已恢復預設 L1 邏輯", Toast.LENGTH_LONG).show()
+                showMain()
+            }
+            .setNegativeButton("取消", null)
+            .show()
     }
 
     private fun toggleDrawer(open: Boolean) { drawerOpen = open; drawer.animate().translationX(if (open) 0f else -dp(310).toFloat()).setDuration(220).start() }
