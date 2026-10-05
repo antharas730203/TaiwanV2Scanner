@@ -42,7 +42,7 @@ object BatchExporter {
             records += StockRecord(market, source)
         }
 
-        val layer1Json = Layer1Scanner.buildResult(stamp, records, topN = 100)
+        val logicText = prefs.getString(Layer1RuleEngine.PREF_KEY, null) ?: Layer1RuleEngine.DEFAULT_LOGIC\n        val validation = Layer1RuleEngine.validate(logicText)\n        require(validation.ok) { "L1 邏輯驗證失敗：${validation.message}；未產生 LAYER1" }\n        val layer1Json = Layer1Scanner.buildResult(stamp, records, logicText)
         val twseText = marketJson(stamp, "TWSE", twse)
         val tpexText = marketJson(stamp, "TPEX", tpex)
         val layer1Text = addReadMarkers(layer1Json)
