@@ -77,7 +77,7 @@ object BatchExporter {
 
         File(baseDir, "layer1_latest.json").writeText(layer1Text, Charsets.UTF_8)
 
-        val scheduleUpload = prefs.getBoolean("schedule_github_upload", false)
+        val scheduleUpload = prefs.getBoolean("schedule_drive_upload", false)
         val archiveResult = if (scanOrigin == "scheduled" && scheduleUpload) {
             try {
                 context.getSharedPreferences("diagnostics", 0).edit()
@@ -88,7 +88,7 @@ object BatchExporter {
                 "失敗：ArchiveExporter ${e.javaClass.simpleName} - ${e.message ?: "無詳細訊息"}"
             }
         } else {
-            "未自動上傳（手動掃描或排程自動上傳未啟用）"
+            "未自動上傳（手動掃描或 Google Drive 排程上傳未啟用）"
         }
         context.getSharedPreferences("diagnostics", 0).edit()
             .putString("archive_upload", archiveResult)
