@@ -52,12 +52,12 @@
 
 ## 5. Manual vs automatic upload
 
-- Manual full scan must not implicitly upload to GitHub.
+- Manual full scan must not implicitly upload to Google Drive.
 - Manual upload uses `上傳最新 JSON` and uploads TWSE/TPEX/LAYER1.
-- Scheduled scan auto-uploads only when the scheduled GitHub upload setting is enabled.
+- Scheduled scan auto-uploads only when the scheduled Google Drive upload setting is enabled.
 - Manual history files use `_MANUAL_` in the filename.
 - Scheduled automatic history files use `_AUTO_` in the filename.
-- Verify actual GitHub files when testing uploads; do not rely only on the App's summary message.
+- Verify actual Google Drive files when testing uploads; do not rely only on the App's summary message.
 
 ## 6. Credentials and signing — DO NOT BREAK
 
@@ -83,7 +83,7 @@
 
 - Update `versionName` and `versionCode` intentionally.
 - Any installable update over an existing release must have a higher `versionCode` and the same release signing identity.
-- Current version: V0.8.9 / versionCode 25.
+- Current version: V0.9.0 / versionCode 26.
 - Do not claim a new APK is ready until CI has verified the Release APK.
 
 ## 8. Scheduling / temporary network recovery
@@ -146,3 +146,10 @@ If a build fails:
 - Each intraday schedule round must have an independent WorkManager unique name derived from its schedule-history ID.
 - Use WorkManager NetworkType.CONNECTED as the system-managed network wait; MarketStatus is authoritative only when the worker starts.
 - Do not add force-Wi-Fi, force-cellular, or long-running WakeLock behavior unless separately justified by device evidence.
+
+
+## 14. Google Drive archive destination (V0.9.0)
+- Cloud JSON archives are written to a user-selected Google Drive history folder using Android persisted document-tree permission.
+- Do not add Google access tokens, OAuth secrets, or service-account credentials to source control.
+- Preserve TWSE/TPEX/LAYER1 filenames, record_index, _read_index and the 6000-character safe-reading rule.
+- GitHub is retained for source code, version history, CI and AI development documentation; it is no longer the runtime JSON archive destination.
