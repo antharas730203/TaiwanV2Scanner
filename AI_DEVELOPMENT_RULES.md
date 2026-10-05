@@ -83,7 +83,7 @@
 
 - Update `versionName` and `versionCode` intentionally.
 - Any installable update over an existing release must have a higher `versionCode` and the same release signing identity.
-- Current version: V0.9.0 / versionCode 26.
+- Current version: V0.9.1 / versionCode 27.
 - Do not claim a new APK is ready until CI has verified the Release APK.
 
 ## 8. Scheduling / temporary network recovery
@@ -153,3 +153,12 @@ If a build fails:
 - Do not add Google access tokens, OAuth secrets, or service-account credentials to source control.
 - Preserve TWSE/TPEX/LAYER1 filenames, record_index, _read_index and the 6000-character safe-reading rule.
 - GitHub is retained for source code, version history, CI and AI development documentation; it is no longer the runtime JSON archive destination.
+
+
+## 15. Replaceable Layer1 logic (V0.9.1)
+- Keep exactly one active L1 rule set; do not add strategy-profile switching unless explicitly requested.
+- L1 rule input must remain declarative and validated. Never execute pasted Kotlin/Java/script code.
+- Preserve the current JSON schema compatibility when strategy research produces a new rule set.
+- Invalid rules must be rejected before save and must not produce a fabricated LAYER1 file.
+- Keep strategy metadata in every LAYER1 output: strategy_name, logic_version, logic_updated, logic_schema_version.
+- Do not move Layer2 fundamental/theme research or Layer3 entry/Fibonacci analysis into Layer1.
