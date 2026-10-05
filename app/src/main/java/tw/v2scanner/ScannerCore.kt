@@ -294,10 +294,8 @@ object ScanEngine {
                 .putInt("last_safe_batch_max_chars", batches.maxChars)
                 .putString("last_attempts", result.attempts.joinToString("\n"))
                 .apply()
-            val upload = if (context.getSharedPreferences(PREF_SETTINGS, 0).getBoolean("github_auto_upload", false)) {
-                GitHubUploader.uploadScan(context, json, stamp, mode = "full")
-            } else "未自動上傳（功能未啟用）"
-            "完整市場掃描\n上市：${result.markets.first { it.market == "TWSE" }.codes.size} 檔｜上櫃：${result.markets.first { it.market == "TPEX" }.codes.size} 檔\n全市場：${result.expected} 檔\n\n成功：${result.returned}/${result.expected}\n完整率：${"%.2f".format(result.rate)}%\n最終批次：${result.finalBatchSize} 檔/批\n失敗批次：${result.failedBatches}\n缺失：${result.missing.size} 檔\n缺失代號：${result.missing.take(30).joinToString(", ")}${if (result.missing.size > 30) " …" else ""}\n耗時：${"%.2f".format(result.seconds)} 秒\n\n${result.attempts.joinToString("\n")}\n\nGitHub：$upload"
+            val archive = context.getSharedPreferences(PREF_DIAG, 0).getString("archive_upload", "未自動上傳") ?: "未自動上傳"
+            "完整市場掃描\n上市：${result.markets.first { it.market == "TWSE" }.codes.size} 檔｜上櫃：${result.markets.first { it.market == "TPEX" }.codes.size} 檔\n全市場：${result.expected} 檔\n\n成功：${result.returned}/${result.expected}\n完整率：${"%.2f".format(result.rate)}%\n最終批次：${result.finalBatchSize} 檔/批\n失敗批次：${result.failedBatches}\n缺失：${result.missing.size} 檔\n缺失代號：${result.missing.take(30).joinToString(", ")}${if (result.missing.size > 30) " …" else ""}\n耗時：${"%.2f".format(result.seconds)} 秒\n\n${result.attempts.joinToString("\n")}\n\nGoogle Drive：$archive"
         } catch (e: Exception) {
             diag.edit().putString("last_run_finished", nowReadable()).putString("last_run_error", "${e.javaClass.simpleName}: ${e.message}").apply()
             "自動/完整掃描失敗：${e.javaClass.simpleName}\n${e.message ?: "無詳細訊息"}\n\n網路：${NetworkState.summary(context)}"
