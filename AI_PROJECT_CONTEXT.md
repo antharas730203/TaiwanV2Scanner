@@ -8,7 +8,7 @@
 - Repository: `antharas730203/TaiwanV2Scanner`
 - Default branch: `main`
 - Package / applicationId: `tw.v2scanner`
-- Current development version: **V0.8.9 / versionCode 25**
+- Current development version: **V0.9.0 / versionCode 26**
 - Previous verified baseline: V0.8.5 / versionCode 21
 - Historical stable baseline: V0.6.8
 
@@ -22,14 +22,14 @@ The stock-selection strategy itself is maintained separately. Do not redefine or
 
 Main flow:
 
-`ScannerCore → ScanEngine → BatchExporter → DataArchiveUploader → GitHub`
+`ScannerCore → ScanEngine → BatchExporter → DataArchiveUploader → Google Drive`
 
 Important components:
 
 - `ScannerCore.kt`: TWSE/TPEX data acquisition and adaptive batch scanning. This is a verified core component and must not be rewritten casually.
 - `ScanEngine`: coordinates full scan and Layer1 generation.
-- `BatchExporter.kt`: creates local complete JSON outputs and handles scheduled GitHub archive upload when enabled.
-- `DataArchiveUploader.kt`: uploads complete TWSE/TPEX/LAYER1 history files to GitHub and securely loads the GitHub token.
+- `BatchExporter.kt`: creates local complete JSON outputs and handles scheduled Google Drive archive upload when enabled.
+- `DataArchiveUploader.kt`: writes complete TWSE/TPEX/LAYER1 history files to the user-selected Google Drive history folder through Android persisted document-tree access.
 - `MainActivity.kt`: App UI, settings, manual actions, status and diagnostics.
 - `ExactScanScheduler.kt`: exact alarm scheduling, including independent post-market scheduling.
 - `BootReceiver.kt`: restores intraday and post-market scheduling after reboot.
@@ -62,7 +62,7 @@ No separate INDEX JSON is required. Record markers are embedded in the records t
 
 Layer1 records its layer, strategy, source records, qualified count, top_n and qualified/result stock data as implemented by the current source.
 
-## 6. GitHub archive naming
+## 6. Google Drive archive naming
 
 Manual upload:
 
@@ -76,9 +76,9 @@ Scheduled automatic upload:
 - `scanner_data/history/YYYYMMDD_HHMMSS_AUTO_TPEX.json`
 - `scanner_data/history/YYYYMMDD_HHMMSS_AUTO_LAYER1.json`
 
-A manual scan must not implicitly upload to GitHub. The user must press `上傳最新 JSON` for a manual upload.
+A manual scan must not implicitly upload to Google Drive. The user must press `上傳最新 JSON` for a manual upload.
 
-A scheduled scan uploads automatically only when `排程掃描完成後自動上傳 GitHub` is enabled.
+A scheduled scan uploads automatically only when `排程掃描完成後自動上傳 Google Drive` is enabled.
 
 ## 7. Post-market scheduling
 
@@ -170,7 +170,7 @@ Drawer requirements:
 
 ## 12. About section
 
-Current intended version: **V0.8.8**.
+Current intended version: **V0.9.0**.
 
 Feature descriptions include:
 
@@ -180,7 +180,7 @@ Feature descriptions include:
 - Exact Alarm 精確排程
 - 獨立盤後排程
 - 排程歷史診斷
-- GitHub JSON 歸檔
+- Google Drive JSON 歸檔
 - 手動／排程上傳支援
 - TWSE、TPEX、LAYER1 三份完整資料
 
@@ -231,3 +231,10 @@ After modifying code:
 - Intraday scheduled work now uses a unique WorkManager name per schedule-history ID, preventing a waiting round from being chained behind another intraday round.
 - AndroidManifest declares ACCESS_NETWORK_STATE for the existing NetworkState diagnostics.
 - ScannerCore acquisition, TWSE/TPEX endpoints, adaptive batches, JSON/archive structure, GitHub upload architecture, scan times, and 5314 monitoring schedule are unchanged.
+
+
+### V0.9.0 Google Drive archive migration
+- JSON cloud archive destination changed from GitHub to the user-selected Google Drive `TaiwanV2Scanner/scanner_data/history` folder.
+- The App uses Android Storage Access Framework persisted tree permission; no Google credential or OAuth token is stored in source.
+- Manual and scheduled archive naming and TWSE/TPEX/LAYER1 JSON structure remain unchanged.
+- GitHub remains the source-code/version repository only.
