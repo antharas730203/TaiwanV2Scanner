@@ -1,3 +1,11 @@
+## V0.9.0 — 2026-10-05
+- Runtime JSON archive destination changed from GitHub to Google Drive.
+- User selects `TaiwanV2Scanner/scanner_data/history` once through Android's system folder picker; persisted read/write tree permission is reused by scheduled uploads.
+- Manual and scheduled uploads continue producing TWSE/TPEX/LAYER1 with the existing timestamp/tag naming and read markers.
+- Removed GitHub runtime archive controls from the current UI; GitHub remains the source-code and CI repository.
+- Version bumped to 0.9.0 / versionCode 26 and About display synchronized.
+- Scanner acquisition, adaptive batch logic, exact schedule times and post-market rules are unchanged.
+
 ## V0.8.9 — 2026-09-21
 - Intraday exact-alarm receiver now queues trading scans immediately instead of probing the market API before WorkManager.
 - WorkManager NetworkType.CONNECTED waits for network availability; the worker then re-checks MarketStatus before scanning.
