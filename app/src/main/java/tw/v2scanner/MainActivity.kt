@@ -28,24 +28,19 @@ import android.widget.TextView
 import android.widget.Toast
 import org.json.JSONObject
 import java.io.File
-import java.net.HttpURLConnection
-import java.net.URL
 
 class MainActivity : Activity() {
     private lateinit var status: TextView
     private lateinit var result: TextView
     private lateinit var auto: CheckBox
-    private lateinit var autoGitHub: CheckBox
+    private lateinit var autoDrive: CheckBox
     private lateinit var scheduleTimes: EditText
     private lateinit var postMarketEnabled: CheckBox
     private lateinit var postMarketTime: EditText
-    private lateinit var githubOwner: EditText
-    private lateinit var githubRepo: EditText
-    private lateinit var githubBranch: EditText
-    private lateinit var githubToken: EditText
     private lateinit var drawer: View
     private val prefs by lazy { getSharedPreferences("settings", 0) }
     private var drawerOpen = false
+    private val driveFolderRequestCode = 7302
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -92,8 +87,8 @@ class MainActivity : Activity() {
         actions.addView(roundButton("手動完整掃描", 58, true).apply {
             setOnClickListener { runFullScan(this) }
         }, actionParams(0))
-        actions.addView(roundButton("驗證 GitHub", 50, false).apply {
-            setOnClickListener { verifyGitHubButton(this) }
+        actions.addView(roundButton("設定 Google Drive", 50, false).apply {
+            setOnClickListener { chooseDriveFolder() }
         }, actionParams(10))
         actions.addView(roundButton("匯出最新 JSON", 50, false).apply {
             setOnClickListener { exportLatestJson() }
@@ -153,22 +148,22 @@ class MainActivity : Activity() {
         }, FrameLayout.LayoutParams(dp(52), dp(52), Gravity.START))
         panel.addView(top)
 
-        panel.addView(sectionHeader("GitHub 設定"), actionParams(12))
-        val githubBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
-        githubOwner = edit("擁有者", prefs.getString("github_owner", "antharas730203"))
-        githubRepo = edit("Repository", prefs.getString("github_repo", "TaiwanV2Scanner"))
-        githubBranch = edit("分支", prefs.getString("github_branch", "main"))
-        githubToken = edit("Token（留白代表保留既有 Token）", null).apply { inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD }
-        githubBox.addView(githubOwner, editParams()); githubBox.addView(githubRepo, editParams()); githubBox.addView(githubBranch, editParams()); githubBox.addView(githubToken, editParams())
-        githubBox.addView(roundButton("驗證 GitHub", 48, false).apply { setOnClickListener { verifyGitHubButton(this) } }, actionParams(4))
-        githubBox.addView(roundButton("儲存 GitHub 設定", 48, true).apply { setOnClickListener { saveGitHubOnly() } }, actionParams(6))
-        panel.addView(githubBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) }); attachExpandable(panel, githubBox)
+        panel.addView(sectionHeader("Google Drive 設定"), actionParams(12))
+        val driveBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
+        driveBox.addView(TextView(this).apply {
+            text = "第一次設定時，請選擇 Google Drive 裡的 TaiwanV2Scanner/scanner_data/history 資料夾。App 會保存該資料夾的寫入權限，之後排程可直接寫入。"
+            textSize = 14f
+            setTextColor(Color.LTGRAY)
+            setPadding(0, dp(6), 0, dp(8))
+        })
+        driveBox.addView(roundButton("選擇 Google Drive history 資料夾", 50, true).apply { setOnClickListener { chooseDriveFolder() } }, actionParams(4))
+        panel.addView(driveBox, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(6) }); attachExpandable(panel, driveBox)
 
         panel.addView(sectionHeader("自動排程"), actionParams(12))
         val scheduleBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE }
         auto = CheckBox(this).apply { text = "啟用自動排程"; isChecked = prefs.getBoolean("auto", false); setTextColor(Color.WHITE) }
-        autoGitHub = CheckBox(this).apply { text = "排程掃描完成後自動上傳 GitHub"; isChecked = prefs.getBoolean("github_auto_upload", false); setTextColor(Color.WHITE) }
-        scheduleBox.addView(auto); scheduleBox.addView(autoGitHub)
+        autoDrive = CheckBox(this).apply { text = "排程掃描完成後自動上傳 Google Drive"; isChecked = prefs.getBoolean("schedule_drive_upload", false); setTextColor(Color.WHITE) }
+        scheduleBox.addView(auto); scheduleBox.addView(autoDrive)
         val group = RadioGroup(this).apply { orientation = RadioGroup.VERTICAL }
         val trading = RadioButton(this).apply { text = "交易時段模式（09:00～13:30）"; id = View.generateViewId(); isChecked = prefs.getString("schedule_mode", "trading") != "test"; setTextColor(Color.WHITE) }
         val test = RadioButton(this).apply { text = "測試模式（不限交易時段）"; id = View.generateViewId(); isChecked = prefs.getString("schedule_mode", "trading") == "test"; setTextColor(Color.WHITE) }
@@ -186,8 +181,8 @@ class MainActivity : Activity() {
 
         panel.addView(sectionHeader("關於"), actionParams(12))
         val aboutBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; visibility = View.GONE; setPadding(0, dp(8), 0, dp(12)) }
-        aboutBox.addView(TextView(this).apply { text = "V0.8.8"; textSize = 18f; setTextColor(Color.WHITE) })
-        aboutBox.addView(TextView(this).apply { text = "台股 V2 掃描器\n完整 TWSE＋TPEX 市場掃描\n第一層轉機／動能市場預篩\nExact Alarm 精確排程\n獨立盤後排程\n排程歷史診斷\nGitHub JSON 歸檔\n手動／排程上傳支援\nTWSE、TPEX、LAYER1 三份完整資料"; textSize = 14f; setTextColor(Color.LTGRAY); setPadding(0, dp(6), 0, 0) })
+        aboutBox.addView(TextView(this).apply { text = "V0.9.0"; textSize = 18f; setTextColor(Color.WHITE) })
+        aboutBox.addView(TextView(this).apply { text = "台股 V2 掃描器\n完整 TWSE＋TPEX 市場掃描\n第一層轉機／動能市場預篩\nExact Alarm 精確排程\n獨立盤後排程\n排程歷史診斷\nGoogle Drive JSON 歸檔\n手動／排程上傳支援\nTWSE、TPEX、LAYER1 三份完整資料"; textSize = 14f; setTextColor(Color.LTGRAY); setPadding(0, dp(6), 0, 0) })
         panel.addView(aboutBox); attachExpandable(panel, aboutBox)
 
         val scroll = ScrollView(this).apply { isVerticalScrollBarEnabled = true; scrollBarStyle = View.SCROLLBARS_INSIDE_OVERLAY; setScrollbarFadingEnabled(true); scrollBarFadeDuration = 180; scrollBarDefaultDelayBeforeFade = 500; setScrollBarSize(dp(4)); setFillViewport(true); overScrollMode = View.OVER_SCROLL_NEVER; addView(panel) }
@@ -211,9 +206,28 @@ class MainActivity : Activity() {
         header.setOnClickListener { content.visibility = if (content.visibility == View.VISIBLE) View.GONE else View.VISIBLE; arrow.text = if (content.visibility == View.VISIBLE) "▼" else "▶" }
     }
 
-    private fun saveGitHubOnly() {
-        prefs.edit().putString("github_owner", githubOwner.text.toString().trim()).putString("github_repo", githubRepo.text.toString().trim()).putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" }).apply()
-        val token = githubToken.text.toString().trim(); if (token.isNotEmpty()) GitHubTokenStore.save(this, token); githubToken.text.clear(); Toast.makeText(this, "GitHub 設定已儲存", Toast.LENGTH_SHORT).show(); refreshStatus()
+    private fun chooseDriveFolder() {
+        val intent = Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).apply {
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION or Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION or Intent.FLAG_GRANT_PREFIX_URI_PERMISSION)
+        }
+        startActivityForResult(intent, driveFolderRequestCode)
+    }
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (requestCode != driveFolderRequestCode || resultCode != RESULT_OK) return
+        val uri = data?.data ?: return
+        val flags = (data.flags and (Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION))
+        try {
+            contentResolver.takePersistableUriPermission(uri, flags)
+            prefs.edit().putString(DataArchiveUploader.PREF_DRIVE_TREE_URI, uri.toString()).apply()
+            result.text = "Google Drive 設定完成。\n\n已保存 history 資料夾的讀寫權限，手動與排程 JSON 將上傳至此資料夾。"
+            Toast.makeText(this, "Google Drive history 資料夾已設定", Toast.LENGTH_LONG).show()
+            refreshStatus()
+        } catch (e: Exception) {
+            result.text = "Google Drive 設定失敗：${e.javaClass.simpleName}\n${e.message ?: "無詳細訊息"}"
+            Toast.makeText(this, "無法保存 Google Drive 資料夾權限", Toast.LENGTH_LONG).show()
+        }
     }
 
     private fun toggleDrawer(open: Boolean) { drawerOpen = open; drawer.animate().translationX(if (open) 0f else -dp(310).toFloat()).setDuration(220).start() }
@@ -222,33 +236,12 @@ class MainActivity : Activity() {
         scanButton.isEnabled = false; status.text = "正在完整掃描＋第一層……"; Thread { val report = ScanEngine.runFull(this); runOnUiThread { result.text = report; status.text = "手動掃描＋第一層完成"; scanButton.isEnabled = true; refreshStatus() } }.start()
     }
 
-    private fun verifyGitHubButton(button: View) {
-        button.isEnabled = false; status.text = "正在驗證 GitHub Token／Repository……"; result.text = "正在向 GitHub API 驗證目前 Token。\n\n這一步只讀取 Repository，不會修改任何檔案。"; Thread { val report = verifyGitHubAccess(); runOnUiThread { status.text = report.lineSequence().firstOrNull() ?: report; result.text = report; button.isEnabled = true } }.start()
-    }
-
-    private fun verifyGitHubAccess(): String {
-        val token = GitHubTokenStore.load(this) ?: return "GitHub 驗證失敗：Token 未設定。\n\n請在 GitHub 設定中貼上新的 Fine-grained PAT，儲存後再驗證。"
-        val owner = prefs.getString("github_owner", "antharas730203").orEmpty().trim(); val repo = prefs.getString("github_repo", "TaiwanV2Scanner").orEmpty().trim(); val branch = prefs.getString("github_branch", "main").orEmpty().trim().ifEmpty { "main" }
-        if (owner.isBlank() || repo.isBlank()) return "GitHub 驗證失敗：Repository 設定不完整。"
-        return try {
-            val url = URL("https://api.github.com/repos/$owner/$repo"); val conn = (url.openConnection() as HttpURLConnection).apply { requestMethod = "GET"; connectTimeout = 8000; readTimeout = 12000; setRequestProperty("Authorization", "Bearer $token"); setRequestProperty("Accept", "application/vnd.github+json"); setRequestProperty("X-GitHub-Api-Version", "2022-11-28"); setRequestProperty("User-Agent", "TaiwanV2Scanner/0.8.7") }
-            val code = conn.responseCode; val body = try { (if (code in 200..299) conn.inputStream else conn.errorStream)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty() } finally { conn.disconnect() }
-            when (code) {
-                200 -> { val obj = JSONObject(body); "GitHub 驗證成功 ✓\n\nRepository：${obj.optString("full_name", "$owner/$repo")}\n分支：$branch\nToken：有效\n\n目前已確認 App 可以用這組 Token 讀取 Repository。\n接下來可用「上傳最新 JSON」確認 Contents 寫入。" }
-                401 -> "GitHub 驗證失敗：HTTP 401\n\nToken 無效、已撤銷、過期，或 App 裡保存的 Token 已失效。"
-                403 -> "GitHub 驗證失敗：HTTP 403\n\nToken 已被 GitHub 辨識，但權限不足。請確認 Token 對 TaiwanV2Scanner 的 Contents 具有 Read and write 權限。"
-                404 -> "GitHub 驗證失敗：HTTP 404\n\nRepository 找不到，或 Token 沒有被授權存取 $owner/$repo。"
-                else -> "GitHub 驗證失敗：HTTP $code\n\nGitHub 回應：${body.take(300)}"
-            }
-        } catch (e: Exception) { "GitHub 驗證失敗：${e.javaClass.simpleName}\n\n${e.message ?: "無詳細訊息"}" }
-    }
-
     private fun saveSettings(tradingMode: Boolean) {
         try {
             val times = scheduleTimes.text.toString().trim().ifEmpty { ScanScheduler.DEFAULT_TIMES }; ScanScheduler.parseAndValidate(times)
             val postTime = postMarketTime.text.toString().trim().ifEmpty { PostMarketScanner.DEFAULT_TIME }; ScanScheduler.parseAndValidate(postTime); if (postTime.count { it == ',' } > 0) throw IllegalArgumentException("盤後排程只能設定一個時間，例如 14:05")
-            val token = githubToken.text.toString().trim(); if (token.isNotEmpty()) GitHubTokenStore.save(this, token)
-            prefs.edit().putBoolean("auto", auto.isChecked).putBoolean("github_auto_upload", autoGitHub.isChecked).putBoolean("schedule_github_upload", autoGitHub.isChecked).putString("schedule_mode", if (tradingMode) "trading" else "test").putString("schedule_times", times).putBoolean("post_market_enabled", postMarketEnabled.isChecked).putString("post_market_time", postTime).putString("github_owner", githubOwner.text.toString().trim()).putString("github_repo", githubRepo.text.toString().trim()).putString("github_branch", githubBranch.text.toString().trim().ifEmpty { "main" }).apply()
+            if (autoDrive.isChecked && !DataArchiveUploader.isConfigured(this)) throw IllegalArgumentException("請先選擇 Google Drive history 資料夾")
+            prefs.edit().putBoolean("auto", auto.isChecked).putBoolean("schedule_drive_upload", autoDrive.isChecked).putBoolean("github_auto_upload", false).putBoolean("schedule_github_upload", false).putString("schedule_mode", if (tradingMode) "trading" else "test").putString("schedule_times", times).putBoolean("post_market_enabled", postMarketEnabled.isChecked).putString("post_market_time", postTime).apply()
             ScanScheduler.cancel(this); ExactScanScheduler.cancel(this)
             if (auto.isChecked || postMarketEnabled.isChecked) {
                 if (!ExactScanScheduler.canScheduleExact(this)) {
@@ -258,7 +251,7 @@ class MainActivity : Activity() {
                 }
                 ExactScanScheduler.schedule(this, if (auto.isChecked) times else "", if (postMarketEnabled.isChecked) postTime else null)
             }
-            githubToken.text.clear(); Toast.makeText(this, "設定已儲存", Toast.LENGTH_SHORT).show(); refreshStatus()
+            Toast.makeText(this, "設定已儲存", Toast.LENGTH_SHORT).show(); refreshStatus()
         } catch (e: Exception) { Toast.makeText(this, "設定失敗：${e.message ?: "未知錯誤"}", Toast.LENGTH_LONG).show() }
     }
 
@@ -267,7 +260,7 @@ class MainActivity : Activity() {
     }
 
     private fun uploadLatestJson(button: View) {
-        val fullJson = ScanPersistence.lastJson(this); if (fullJson.isNullOrEmpty()) { Toast.makeText(this, "尚未有掃描資料", Toast.LENGTH_SHORT).show(); return }; val baseDir = getExternalFilesDir(null) ?: filesDir; val layer1File = File(baseDir, "layer1_latest.json"); if (!layer1File.exists()) { Toast.makeText(this, "找不到最新第一層 JSON，請先重新掃描", Toast.LENGTH_LONG).show(); return }; val layer1Json = layer1File.readText(Charsets.UTF_8); val stamp = try { JSONObject(fullJson).optString("scan_time").ifBlank { System.currentTimeMillis().toString() } } catch (_: Exception) { System.currentTimeMillis().toString() }; button.isEnabled = false; status.text = "正在上傳最新 TWSE／TPEX／LAYER1 JSON……"; result.text = "正在上傳最新完整資料至 GitHub。\n\n手動上傳不會啟動新的掃描。"; Thread { val report = DataArchiveUploader.upload(this, stamp, fullJson, layer1Json, "MANUAL"); getSharedPreferences("diagnostics", 0).edit().putString("manual_archive_upload", report).apply(); runOnUiThread { result.text = report; status.text = if (report.startsWith("成功")) "最新 JSON 上傳完成" else "最新 JSON 上傳失敗"; button.isEnabled = true } }.start()
+        val fullJson = ScanPersistence.lastJson(this); if (fullJson.isNullOrEmpty()) { Toast.makeText(this, "尚未有掃描資料", Toast.LENGTH_SHORT).show(); return }; val baseDir = getExternalFilesDir(null) ?: filesDir; val layer1File = File(baseDir, "layer1_latest.json"); if (!layer1File.exists()) { Toast.makeText(this, "找不到最新第一層 JSON，請先重新掃描", Toast.LENGTH_LONG).show(); return }; val layer1Json = layer1File.readText(Charsets.UTF_8); val stamp = try { JSONObject(fullJson).optString("scan_time").ifBlank { System.currentTimeMillis().toString() } } catch (_: Exception) { System.currentTimeMillis().toString() }; button.isEnabled = false; status.text = "正在上傳最新 TWSE／TPEX／LAYER1 JSON……"; result.text = "正在上傳最新完整資料至 Google Drive。\n\n手動上傳不會啟動新的掃描。"; Thread { val report = DataArchiveUploader.upload(this, stamp, fullJson, layer1Json, "MANUAL"); getSharedPreferences("diagnostics", 0).edit().putString("manual_archive_upload", report).apply(); runOnUiThread { result.text = report; status.text = if (report.startsWith("成功")) "最新 JSON 上傳完成" else "最新 JSON 上傳失敗"; button.isEnabled = true } }.start()
     }
 
     private fun showDiagnostics() {
@@ -284,7 +277,16 @@ class MainActivity : Activity() {
     }
 
     private fun refreshStatus() {
-        if (!::status.isInitialized) return; val token = if (GitHubTokenStore.hasToken(this)) "已設定" else "未設定"; val times = prefs.getString("schedule_times", ScanScheduler.DEFAULT_TIMES) ?: ScanScheduler.DEFAULT_TIMES; val postTime = prefs.getString("post_market_time", PostMarketScanner.DEFAULT_TIME) ?: PostMarketScanner.DEFAULT_TIME; val postEnabled = prefs.getBoolean("post_market_enabled", false); val diag = getSharedPreferences("diagnostics", 0); val l1 = diag.getString("layer1_status", "尚未執行") ?: "尚未執行"; val l1Display = if (l1 == "LAYER1_COMPLETE") "完成" else l1; val engine = diag.getString("schedule_engine", "EXACT_ALARM") ?: "EXACT_ALARM"; status.text = "排程：${if (prefs.getBoolean("auto", false)) "已啟用" else "未啟用"}\n時間：$times\n盤後排程：${if (postEnabled) "已啟用" else "未啟用"}\n盤後時間：$postTime\n排程引擎：$engine\nGitHub Token：$token\n第一層：$l1Display"
+        if (!::status.isInitialized) return
+        val drive = if (DataArchiveUploader.isConfigured(this)) "已設定" else "未設定"
+        val times = prefs.getString("schedule_times", ScanScheduler.DEFAULT_TIMES) ?: ScanScheduler.DEFAULT_TIMES
+        val postTime = prefs.getString("post_market_time", PostMarketScanner.DEFAULT_TIME) ?: PostMarketScanner.DEFAULT_TIME
+        val postEnabled = prefs.getBoolean("post_market_enabled", false)
+        val diag = getSharedPreferences("diagnostics", 0)
+        val l1 = diag.getString("layer1_status", "尚未執行") ?: "尚未執行"
+        val l1Display = if (l1 == "LAYER1_COMPLETE") "完成" else l1
+        val engine = diag.getString("schedule_engine", "EXACT_ALARM") ?: "EXACT_ALARM"
+        status.text = "排程：${if (prefs.getBoolean("auto", false)) "已啟用" else "未啟用"}\n時間：$times\n盤後排程：${if (postEnabled) "已啟用" else "未啟用"}\n盤後時間：$postTime\n排程引擎：$engine\nGoogle Drive：$drive\n第一層：$l1Display"
     }
 
     override fun onBackPressed() { if (drawerOpen) toggleDrawer(false) else super.onBackPressed() }
