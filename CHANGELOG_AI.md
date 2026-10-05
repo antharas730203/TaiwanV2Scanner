@@ -1,3 +1,12 @@
+## V0.9.1 — 2026-10-05
+- Added a replaceable, validated Layer1 JSON rule engine; scanner acquisition remains unchanged.
+- Added drawer `L1 邏輯區` with paste/edit, validation-before-save, persistence across restart, and restore-default.
+- The App executes only supported declarative metrics and never arbitrary pasted Kotlin/Java/script code.
+- The built-in `轉機＋動能 V1.0` rule set reproduces the previous hard-coded Layer1 scoring.
+- LAYER1 output now records strategy_name, logic_version, logic_updated and logic_schema_version.
+- Invalid logic stops Layer1 generation explicitly rather than creating a fake LAYER1.
+- Version bumped to 0.9.1 / versionCode 27.
+
 ## V0.9.0 — 2026-10-05
 - Runtime JSON archive destination changed from GitHub to Google Drive.
 - User selects `TaiwanV2Scanner/scanner_data/history` once through Android's system folder picker; persisted read/write tree permission is reused by scheduled uploads.
